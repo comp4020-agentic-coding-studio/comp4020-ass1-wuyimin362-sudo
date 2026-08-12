@@ -42,7 +42,15 @@ jobs:
         if: ${{ !github.event.repository.is_template }}
         run: pnpm check:evidence
       - name: Check internal links
-        run: pnpm dlx linkinator ./dist --silent
+        # astro.config.mjs sets `base`, so every internal link is absolute
+        # under /comp4020-ass1-wuyimin362-sudo/ (matching how GitHub Pages
+        # serves a project site) — but dist/ on disk has no such subfolder, so
+        # linkinator's local server 404s on all of them unless that prefix is
+        # rewritten away first.
+        run: >-
+          pnpm dlx linkinator ./dist --silent
+          --url-rewrite-search "/comp4020-ass1-wuyimin362-sudo/"
+          --url-rewrite-replace "/"
       - name: Scan for committed secrets
         # Pinned, both halves: the SHA fixes the action's script, and `version`
         # fixes the scanner image, which otherwise floats on :latest. These two
