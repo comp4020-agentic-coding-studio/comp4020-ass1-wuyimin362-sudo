@@ -114,6 +114,46 @@ generators (Astro included) need `base` set explicitly, and getting it wrong
 looks fine locally while every asset 404s on the live URL. And commit the
 updated `pnpm-lock.yaml`: CI installs with `--frozen-lockfile`.
 
+## Astro-specific traps
+
+Learned the hard way while building last week's prototype — worth checking for
+before they cost time again, in this stack or the next one that uses Astro:
+
+- **`aspect-ratio` plus `max-height` on the same element can silently collapse
+  its width.** If the element's width isn't otherwise constrained, the browser
+  can size it from the height down through the ratio rather than the width up,
+  leaving it far narrower than its container — a media box that looks squashed
+  into part of its row is usually this, not a layout bug elsewhere. Give it an
+  explicit `width: 100%` rather than relying on `aspect-ratio` alone to fill
+  its container.
+- **Whitespace right before a tag on the next line gets trimmed.** Text ending
+  a line immediately before an opening tag on the following line (`word\n<a
+  href="...">`) loses the space between them in the rendered HTML. Keep inline
+  text and the tag that follows it on the same source line whenever the space
+  between them matters.
+- **`astro preview` and `astro dev` can end up on adjacent ports, and only one
+  of them hot-reloads.** `astro preview` serves the already-built `dist/`
+  folder as a static server with no watch/rebuild. If a port you're pointing a
+  browser or screenshot tool at isn't reflecting a source edit, check which
+  command actually owns it (`ps aux | grep astro`) before assuming the edit is
+  wrong — it's more likely you need an explicit `pnpm build` first.
+- **A `base` without a trailing slash breaks every link built by concatenation,
+  and `astro dev`/`astro preview` can't show you this.** `import.meta.env.BASE_URL`
+  is exactly the string you set in `astro.config.mjs`'s `base`, with no
+  normalization — `base: "/repo"` plus a helper that does `` `${BASE}${path}` ``
+  produces `/repomenu/`, not `/repo/menu/`. Set `base` with both a leading and
+  trailing slash (`"/repo/"`), or make the join itself slash-safe, and check the
+  actual `href` attributes in built output (`grep href dist/**/*.html`), not
+  just that the pages load. It also breaks the CI links check a different way:
+  `dist/` on disk has no subfolder matching `base`, so `linkinator ./dist`
+  404s on every base-prefixed link whether or not it's well-formed — that step
+  needs `--url-rewrite-search "/repo/" --url-rewrite-replace "/"` (unanchored;
+  linkinator matches against the full crawled URL, host included, so a `^`
+  anchor never fires) to map local paths back to what's actually on disk before
+  checking them. This didn't surface until the ship-time CI run, because
+  neither `pnpm check` nor a local dev server exercises the deployed base path
+  or the links check.
+
 ## Your process is part of the mark
 
 The deployed page is only half of it. How you got there is marked too: your
