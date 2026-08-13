@@ -291,3 +291,116 @@ backspin contact: y=0.088 vx=3.24 omega=+702   topspin contact: y=0.086 vx=3.92 
 backspin centroid 44.1°, topspin centroid 21.5°, gap 22.6° (contract: > 15)
 default (backspin, 0, 5) => {"outcome":"NET"} (contract: NET)
 ```
+
+## Commit map
+
+| commit | what landed |
+| --- | --- |
+| `e83b968` | `spec/assignment-1.test.ts` — the return contract, red on purpose |
+| `6770a80` | `spec/physics.test.ts` — INV-1..INV-5, red on purpose |
+| `508d21c` | `src/lib/physics.ts` — INV-1..INV-5 green |
+| `b48821f` | `src/lib/simulate.ts` green; `MAGNUS_COEFFICIENT` 0.5 → 0.12; `SWING_SPEED_MPS` 7.0 → 4.5; serve presets searched; `spec/serve.test.ts` added |
+| `cccb124` | the page: side view, controls, solution map, `spec/thesis.test.ts` |
+| `a2266e9` | contrast fix, screen-reader phrasing, off-frame end markers |
+| `07480e1` | `CLAUDE.md` — pipefail, stale-port, and scenario-sensor rules |
+
+Baseline red state (13 failing) is at the top of this file; the run that proves
+`spec/serve.test.ts` catches what INV-1..INV-5 cannot is above.
+
+## Measured numbers behind the page's claims
+
+`notes/overlap.ts`, 2° grid over the full control range (3,621 settings each):
+
+```
+backspin IN: 134   topspin IN: 254   both: 9
+share of backspin solutions that also return topspin: 6.7%
+bat-angle centroid: backspin 44.3°, topspin 24.1°, gap 20.2°
+```
+
+At the 5° grid `spec/assignment-1.test.ts` uses, the centroid gap is 22.6°
+against a contract of > 15°. The page renders the 134/9 figure live from the
+same simulation; `spec/thesis.test.ts` fails if the shared fraction ever
+exceeds one in ten.
+
+Contact states the two serves deliver to the bat (`notes/probe.ts`):
+
+```
+backspin  y=0.088 m  vx=3.24 m/s  omega=+702 rad/s  (112 rev/s)
+topspin   y=0.086 m  vx=3.92 m/s  omega=-652 rad/s  (104 rev/s)
+```
+
+## Rendered-page verification
+
+Chrome via `agent-browser`, against the built site on `astro preview`.
+
+### axe-core, before
+
+```
+$ npx agent-browser a11y
+axe-core: 4.12.1  violations: 1  incomplete: 0  passes: 40
+[serious] color-contrast: Elements must meet minimum color contrast ratio thresholds (8 nodes)
+  - #bat-angle-hint
+  - .slider:nth-child(2) > .scale > span:nth-child(1)
+  - .slider:nth-child(2) > .scale > span:nth-child(2)
+  - #swing-direction-hint
+  - .slider:nth-child(3) > .scale > span:nth-child(1)
+  - .slider:nth-child(3) > .scale > span:nth-child(2)
+  - .axis-label
+  - .footer-note
+```
+
+### axe-core, after (`--ink-faint` #6b7383 → #7c8497)
+
+```
+$ npx agent-browser a11y
+axe-core: 4.12.1  violations: 0  incomplete: 0  passes: 40
+```
+
+### Keyboard
+
+```
+tab order:  A.skip "Skip to the simulation" → nav "Bat angle" → "The shot"
+            → "Every shot" → "Why" → INPUT (serve radio) → INPUT#bat-angle
+            → INPUT#swing-direction
+
+25 × ArrowRight on #bat-angle:
+  "bat=25 outcome=NET live=Against the backspin serve, ..."
+
+ArrowRight on the serve radio group:
+  "serve=topspin checked=topspin outcome=OUT"
+```
+
+### Resize mid-interaction (bat angle left at 42°)
+
+```
+at 390:   bat=42 out=OUT tblCss=332x170  tblBuf=332x170  mapCss=358x236  overflow=false
+at 1920:  bat=42 out=OUT tblCss=1058x269 tblBuf=1058x269 mapCss=635x330  overflow=false
+at 768:   bat=42 out=OUT tblCss=681x173  tblBuf=681x173  mapCss=707x330  overflow=false
+```
+
+### Internal links
+
+```
+$ pnpm dlx linkinator ./dist --silent \
+    --url-rewrite-search "/comp4020-ass1-wuyimin362-sudo/" --url-rewrite-replace "/"
+[404] https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo
+ERROR: Detected 1 broken links. Scanned 5 links in 0.481 seconds.
+```
+
+The only failure is the page's own source-repo link, 404 because the repo is
+still private. The URL matches `git remote -v` exactly. CI's `check` job is
+gated on `!github.event.repository.private`, so it only ever runs once the repo
+is public, at which point the link resolves. Re-run after shipping to confirm.
+
+### Stale preview server
+
+```
+$ ps aux | grep astro
+86287 .../comp4020-crit2-wuyimin362-sudo/.../astro.mjs preview --port 4321
+94646 .../comp4020-ass1-wuyimin362-sudo/.../astro.mjs preview --port 4321   (took 4324)
+
+$ curl -s localhost:4321/comp4020-ass1-wuyimin362-sudo/ | grep -o '<title>[^<]*'
+<title>COMP4020 prototype          ← last week's repo
+$ curl -s localhost:4324/comp4020-ass1-wuyimin362-sudo/ | grep -o '<title>[^<]*'
+<title>Spin tells your bat where to point
+```
