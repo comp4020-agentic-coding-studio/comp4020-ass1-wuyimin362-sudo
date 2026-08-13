@@ -233,3 +233,61 @@ Working tree: `src/lib/physics.ts` implemented; `src/lib/simulate.ts` still a st
  Test Files  1 passed (1)
       Tests  9 passed (9)
 ```
+
+## The serve sensor catches what the physics invariants cannot
+
+Date: 2026-08-13
+
+Two bad serves passed every check in the repo: one whose Magnus lift exceeded
+the ball's weight (floated the length of the table, never bounced), and one
+that arrived 0.11 m below the playing surface. INV-1..INV-5 are all about a
+single contact or a single flight, so none of them can see it.
+
+Deliberately reverting `MAGNUS_COEFFICIENT` from 0.12 back to 0.5 and running
+both files — `spec/physics.test.ts` stays **fully green**, `spec/serve.test.ts`
+goes red and names the bugs:
+
+```
+$ pnpm exec vitest run spec/physics.test.ts spec/serve.test.ts
+
+ FAIL  spec/serve.test.ts > the backspin serve is legal > bounces on the server's half first, then the receiver's half
+AssertionError: second bounce is past the end of the table: expected 2.907881665534729 to be less than 2.74
+
+ FAIL  spec/serve.test.ts > the topspin serve is legal > bounces exactly twice before reaching the receiver
+expected one bounce per half, got 3
+
+ FAIL  spec/serve.test.ts > the topspin serve is legal > clears the net on the way over
+AssertionError: expected 0.06647844301218163 to be greater than 0.1725
+
+ FAIL  spec/serve.test.ts > the topspin serve is legal > reaches the bat above the table, not through it
+AssertionError: the ball arrives below the playing surface — there is nothing to hit: expected -0.10985149600606177 to be greater than 0.02
+
+ FAIL  spec/serve.test.ts > the two serves are a controlled comparison > presents the ball to the bat at the same height
+AssertionError: expected 0.29028649768509673 to be less than 0.03
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  6 failed | 16 passed (22)
+```
+
+Restored to 0.12: 13 passed (13).
+
+## The measured solution map
+
+`notes/probe.ts`, with the tuned presets. `#` = IN, `.` = NET, `o` = OUT;
+rows are bat angle, columns swing direction.
+
+```
+backspin contact: y=0.088 vx=3.24 omega=+702   topspin contact: y=0.086 vx=3.92 omega=-652
+
+=== backspin ===                        === topspin ===
+ -30 .............................       -30 .............................
+   0 .............................       -15 .......................####..
+  20 .............................       -10 .................############
+  25 ..............#oooooooo####..         0 ooooooooooooooooooooooooooooo
+  40 .........##oooooooooooooooooo        25 ###oooooooooooooooooooooooooo
+  55 ..........##ooooooooooooooooo        40 .......###ooooooooooooooooooo
+  70 ..............##ooooooooooooo        50 ................###########..
+
+backspin centroid 44.1°, topspin centroid 21.5°, gap 22.6° (contract: > 15)
+default (backspin, 0, 5) => {"outcome":"NET"} (contract: NET)
+```

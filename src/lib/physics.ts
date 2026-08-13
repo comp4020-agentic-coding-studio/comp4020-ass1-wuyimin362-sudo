@@ -24,9 +24,19 @@ export const FIXED_DT = 0.0005;
 // Lift per unit spin ratio. The usual sphere formula F = ½ρA·C_L·|v|² with
 // C_L = 2·MAGNUS_COEFFICIENT·(rω/|v|) collapses to
 // F = MAGNUS_COEFFICIENT·ρ·A·r·(ω × v) — linear in both ω and v, with no
-// special case at |v| = 0. At 180 rad/s and 6 m/s that is ~0.6 × the ball's
-// weight, which is the right order for a table tennis ball.
-export const MAGNUS_COEFFICIENT = 0.5;
+// special case at |v| = 0.
+//
+// The value is anchored on the heaviest shot in the game rather than picked to
+// make a trajectory look right: a full topspin loop, ~100 rev/s at 20 m/s,
+// pulls down at roughly 1.75 × the ball's weight, which puts the coefficient
+// at 0.12. That is C_L ≈ 0.25 × spin ratio, matching sphere lift measurements
+// over the spin ratios a rally actually reaches (0 to ~2).
+//
+// Set 4× larger this stays inside the physics tests' tolerances — they only
+// pin the direction and the range ordering — but a backspin serve then
+// generates more lift than the ball weighs and floats the length of the table
+// without ever bouncing. INV-1..INV-5 cannot see that; the serve trace can.
+export const MAGNUS_COEFFICIENT = 0.12;
 
 // A solid sphere has I = ⅖mr², so a tangential impulse J at the contact point
 // moves the ball's surface there by (1 + 5/2)·J/m. Killing a slip of s
