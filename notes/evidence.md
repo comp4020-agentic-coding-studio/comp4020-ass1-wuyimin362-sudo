@@ -547,3 +547,53 @@ INV-10  IoU 0.051                                     (ceiling 0.25)
 INV-8 has 0.27 percentage points of headroom, and 5.3% is the most the 2 deg
 grid yields anywhere in the searched space. Any change to a coefficient has to
 re-check it — this is the invariant that will go red first.
+
+## Phase 3 — rendering
+
+Date: 2026-08-13. Screenshots: `notes/shots/phase3-1440.png`, `phase3-390.png`.
+
+### Resize mid-interaction (section 6.2), sliders left at 8 deg / 25 deg
+
+```
+390:   bat=8 swing=25 outcome=in  canvas 332x110  buffer 332x110  overflow=false
+1440:  bat=8 swing=25 outcome=in  canvas 998x186  buffer 998x186  overflow=false
+320:   bat=8 swing=25 outcome=in  canvas 262x110  buffer 262x110  overflow=false
+back:  bat=8 swing=25 outcome=in  canvas 998x186  buffer 998x186  overflow=false
+```
+
+Slider values, act state and the computed trajectory survive; only the
+metres-to-pixels mapping is recomputed.
+
+### The strobe had to become adaptive
+
+At 8 ms a ball at 5 m/s moves 4 cm, which is 3.7 px on a 332 px phone — under
+the 4 px ghost radius, so the trail fused into a smear and stopped being a
+strobe at all. The interval now steps up in whole multiples of 8 ms until the
+ghosts separate, and the legend prints what was actually drawn:
+
+```
+1440 px: "one ball every 8 ms — wide gaps are fast"
+ 390 px: "one ball every 16 ms — wide gaps are fast"
+```
+
+Equal time between balls is the part that encodes speed, so multiplying the
+interval keeps the reading intact where shrinking the ghosts would not.
+
+### Two rendering decisions worth recording
+
+The scene-to-pixel mapping is **isotropic**, and with the strobe it has to be:
+the ghosts are circles with the spin marker riding the rim, so any vertical
+exaggeration would turn them into ellipses and destroy the rotation reading in
+exactly the frames that matter. An earlier build of this prototype stretched
+heights 1.6x to make the net legible; that option is closed now, and the net is
+carried by drawing weight instead.
+
+First pass drew the serve and the return at similar weight and they were
+indistinguishable where they crossed. The serve is context: half-size ghosts,
+0.16 alpha, no spin marker. The return keeps full weight and the red marker
+throughout, and a failed one drains towards `--fail` rather than turning red —
+section 7's "失败态不是红色，是褪色".
+
+The default shot buries into the receiver's own half about 30 cm from the bat,
+so a fade alone was indistinguishable from nothing happening. A faded tick
+marks where it died.

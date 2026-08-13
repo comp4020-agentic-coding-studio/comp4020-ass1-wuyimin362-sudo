@@ -1,0 +1,401 @@
+/* Section 7's palette. The page sits in the colour of the table itself, and
+   the red is rubber — it appears only on the ball's spin marker and on the
+   hitting face of the bat, never as decoration. */
+
+:root {
+  --table: #12313d;
+  --table-lo: #0b2029;
+  --line: #edf1ee;
+  --rubber: #c8102e;
+  --ghost: rgb(237 241 238 / 28%);
+  --fail: #5c7a85;
+
+  /* Section 7 asks for zero font bytes: system stacks only. Numbers use the
+     monospace stack for a scoreboard feel. */
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", menlo, consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", roboto, sans-serif;
+  --measure: 62ch;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--table-lo);
+  color: var(--line);
+  font-family: var(--sans);
+  font-size: clamp(1rem, 0.96rem + 0.2vw, 1.06rem);
+  line-height: 1.6;
+}
+
+:focus-visible {
+  outline: 2px solid var(--line);
+  outline-offset: 3px;
+}
+
+a {
+  color: var(--line);
+}
+
+.skip {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  z-index: 10;
+  padding: 0.6rem 1rem;
+  border-radius: 0 0 6px 6px;
+  background: var(--line);
+  color: var(--table-lo);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip:focus {
+  top: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.masthead {
+  padding: 0.75rem clamp(1rem, 4vw, 3rem);
+  border-bottom: 1px solid rgb(237 241 238 / 12%);
+  background: var(--table);
+}
+
+.masthead nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: baseline;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.masthead a {
+  font-size: 0.85rem;
+  text-decoration: none;
+  opacity: 0.65;
+}
+
+.masthead a:first-child {
+  margin-right: auto;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  opacity: 1;
+}
+
+.masthead a:hover {
+  opacity: 1;
+}
+
+main {
+  max-width: 1120px;
+  padding: 0 clamp(1rem, 4vw, 3rem);
+  margin: 0 auto;
+}
+
+section {
+  padding-block: clamp(2.25rem, 5vw, 4rem);
+}
+
+#instrument {
+  border-top: 1px solid rgb(237 241 238 / 12%);
+}
+
+h1,
+h2 {
+  margin: 0 0 0.75rem;
+  font-weight: 680;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+h1 {
+  max-width: 16ch;
+  font-size: clamp(2.5rem, 1.4rem + 4.8vw, 4.75rem);
+}
+
+h2 {
+  font-size: clamp(1.35rem, 1.1rem + 1vw, 1.9rem);
+}
+
+.eyebrow {
+  margin: 0 0 1rem;
+  color: var(--rubber);
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.standfirst {
+  max-width: var(--measure);
+  margin: 1.5rem 0 0;
+  font-size: clamp(1.05rem, 0.98rem + 0.4vw, 1.28rem);
+  line-height: 1.5;
+  opacity: 0.78;
+}
+
+.lede {
+  max-width: var(--measure);
+  margin: 0 0 1.75rem;
+  opacity: 0.7;
+}
+
+.noscript {
+  max-width: var(--measure);
+  padding: 1rem 1.25rem;
+  border-left: 3px solid var(--rubber);
+  background: var(--table);
+}
+
+/* ------------------------------------------------------------- the stage */
+
+.stage {
+  padding: 0.75rem;
+  border: 1px solid rgb(237 241 238 / 12%);
+  border-radius: 10px;
+  background: var(--table);
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  border-radius: 6px;
+  background: var(--table-lo);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  margin: 0.75rem 0 0.15rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  opacity: 0.6;
+}
+
+.key {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.key::before {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  content: "";
+}
+
+.key-serve::before {
+  background: rgb(237 241 238 / 16%);
+}
+
+.key-return::before {
+  background: rgb(237 241 238 / 50%);
+}
+
+.key-ghost::before {
+  background: var(--ghost);
+}
+
+.key-mark::before {
+  width: 0.4rem;
+  height: 0.4rem;
+  margin: 0 0.15rem;
+  background: var(--rubber);
+}
+
+/* -------------------------------------------------------------- controls */
+
+.controls {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  grid-template-columns: 1fr;
+}
+
+@media (width >= 58rem) {
+  .controls {
+    align-items: start;
+    gap: 2rem;
+    grid-template-columns: auto 1fr 1fr auto;
+  }
+}
+
+.serve-picker {
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.serve-picker legend,
+.slider label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.1rem 0.6rem;
+  align-items: baseline;
+  padding: 0;
+  margin-bottom: 0.55rem;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.radios {
+  display: flex;
+  gap: 0.35rem;
+  padding: 4px;
+  border: 1px solid rgb(237 241 238 / 14%);
+  border-radius: 8px;
+}
+
+.radios label {
+  position: relative;
+  cursor: pointer;
+}
+
+.radios input {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.radios span {
+  /* Section 6.4: touch targets no smaller than 44px. */
+  display: flex;
+  min-height: 44px;
+  padding: 0 1.1rem;
+  border-radius: 6px;
+  align-items: center;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0.6;
+}
+
+.radios input:checked + span {
+  background: var(--line);
+  color: var(--table-lo);
+  opacity: 1;
+}
+
+.radios input:focus-visible + span {
+  outline: 2px solid var(--line);
+  outline-offset: 2px;
+}
+
+.slider output {
+  font-family: var(--mono);
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  opacity: 1;
+}
+
+.hint {
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.75;
+}
+
+input[type="range"] {
+  /* 44px of touch target, with the visible track drawn thin inside it. */
+  width: 100%;
+  height: 44px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: none;
+  appearance: none;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(237 241 238 / 22%);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(237 241 238 / 22%);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  margin-top: -9px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--line);
+  appearance: none;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.scale {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  font-size: 0.72rem;
+  opacity: 0.45;
+}
+
+.verdict {
+  min-width: 11rem;
+}
+
+.outcome {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: clamp(2.4rem, 2rem + 2vw, 3.2rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  text-transform: lowercase;
+}
+
+.outcome[data-outcome="NET"],
+.outcome[data-outcome="OUT"] {
+  color: var(--fail);
+}
+
+.outcome[data-outcome="IN"] {
+  color: var(--line);
+}
+
+.outcome-detail {
+  max-width: 24ch;
+  margin: 0.4rem 0 0;
+  font-size: 0.88rem;
+  opacity: 0.6;
+}

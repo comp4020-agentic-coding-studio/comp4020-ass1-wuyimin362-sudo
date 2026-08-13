@@ -1,10 +1,31 @@
 {
-  "extends": "astro/tsconfigs/strict",
-  "comment": [
-    "notes/ holds throwaway scratch scripts kept as process evidence, not build",
-    "inputs. They are run directly with `node --experimental-strip-types`, which",
-    "needs explicit .ts import extensions that this tsconfig rightly rejects, so",
-    "they sit outside the typecheck rather than having the project relax for them."
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src/**/*.js",
+    "scripts/**/*.js",
+    "test/**/*.js"
   ],
-  "exclude": ["dist", "node_modules", "notes"]
+  "exclude": [
+    "dist",
+    "node_modules",
+    "notes"
+  ]
 }

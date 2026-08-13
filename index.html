@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A backspin serve needs an open bat and a topspin serve a closed one, about 19 degrees apart. Two sliders, one simulated return, and the map of every shot that lands."
+    />
+    <title>the bat lied to you</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip" href="#instrument">skip to the simulation</a>
+
+    <header class="masthead">
+      <nav aria-label="Primary">
+        <a href="./">the bat lied to you</a>
+        <a href="#instrument">return the serve</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <p class="eyebrow" data-copy="tagline"></p>
+        <h1 data-copy="headline"></h1>
+        <p class="standfirst" data-copy="standfirst"></p>
+      </section>
+
+      <section id="instrument" aria-labelledby="act-one-heading">
+        <h2 id="act-one-heading" data-copy="actOne.heading"></h2>
+        <p class="lede" data-copy="actOne.lede"></p>
+
+        <noscript>
+          <p class="noscript" data-static-noscript></p>
+        </noscript>
+
+        <div class="stage">
+          <canvas id="table-view" role="img" aria-label="Side view of the return."></canvas>
+          <p class="legend">
+            <span class="key key-serve" data-copy="legend.serve"></span>
+            <span class="key key-return" data-copy="legend.ret"></span>
+            <span class="key key-ghost"></span>
+            <span class="key key-mark" data-copy="legend.mark"></span>
+          </p>
+        </div>
+
+        <div class="controls">
+          <fieldset class="serve-picker">
+            <legend data-copy="controls.serve"></legend>
+            <div class="radios">
+              <label>
+                <input type="radio" name="serve" value="backspin" checked />
+                <span data-copy="controls.backspin"></span>
+              </label>
+              <label>
+                <input type="radio" name="serve" value="topspin" />
+                <span data-copy="controls.topspin"></span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="slider">
+            <label for="bat-angle">
+              <span data-copy="controls.batAngle"></span>
+              <output id="bat-angle-value" for="bat-angle">0°</output>
+              <span id="bat-angle-hint" class="hint"></span>
+            </label>
+            <input id="bat-angle" type="range" min="-30" max="70" step="1" value="0" />
+            <p class="scale">
+              <span data-copy="controls.batAngleLow"></span>
+              <span data-copy="controls.batAngleHigh"></span>
+            </p>
+          </div>
+
+          <div class="slider">
+            <label for="swing-direction">
+              <span data-copy="controls.swing"></span>
+              <output id="swing-direction-value" for="swing-direction">5°</output>
+              <span id="swing-direction-hint" class="hint"></span>
+            </label>
+            <input id="swing-direction" type="range" min="-60" max="80" step="1" value="5" />
+            <p class="scale">
+              <span data-copy="controls.swingLow"></span>
+              <span data-copy="controls.swingHigh"></span>
+            </p>
+          </div>
+
+          <div class="verdict">
+            <p id="outcome-label" class="outcome"></p>
+            <p id="outcome-detail" class="outcome-detail"></p>
+          </div>
+        </div>
+
+        <p id="outcome-live" class="visually-hidden" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

@@ -65,6 +65,7 @@ describe("INV-1 magnus direction follows the cross product", () => {
 
 // ---------------------------------------------------------------- INV-2
 
+/** @param {import('../src/physics.js').BallState[]} trajectory */
 function landingX(trajectory) {
   for (let i = 1; i < trajectory.length; i++) {
     const a = trajectory[i - 1];
@@ -108,7 +109,9 @@ describe("INV-3 the table couples spin into vx", () => {
 
 // ---------------------------------------------------------------- INV-4
 
+/** @param {import('../src/physics.js').BallState} s */
 const kinetic = (s) => 0.5 * BALL_MASS * (s.vx ** 2 + s.vy ** 2);
+/** @param {import('../src/physics.js').BallState} s */
 const mechanical = (s) => kinetic(s) + BALL_MASS * GRAVITY * s.y;
 const EPS = 1e-6;
 
@@ -142,6 +145,7 @@ describe("INV-4 energy bookkeeping", () => {
     // in the bat's rest frame, where the impulses do no net work on the bat,
     // the ball's total energy cannot rise. Rotational energy is included
     // because friction trades spin against translation in both directions.
+    /** @param {import('../src/physics.js').BallState} s @param {{x: number, y: number}} bat */
     const energyInBatFrame = (s, bat) =>
       0.5 * BALL_MASS * ((s.vx - bat.x) ** 2 + (s.vy - bat.y) ** 2) +
       0.5 * BALL_INERTIA * s.omega ** 2;
@@ -244,10 +248,10 @@ const backStats = feasibleStats(backGrid);
 const topStats = feasibleStats(topGrid);
 
 describe("INV-8 both serves are answerable", () => {
-  for (const [name, stats] of [
+  for (const [name, stats] of /** @type {const} */ ([
     ["backspin", backStats],
     ["topspin", topStats],
-  ]) {
+  ])) {
     it(`${name} has a feasible region larger than 5% of the grid`, () => {
       assert.ok(stats.count > 0, `${name} has no feasible settings at all`);
       assert.ok(
@@ -298,7 +302,7 @@ describe("INV-13 the simulation is deterministic", () => {
     const second = simulateReturn(SPIN.BACKSPIN, 12, 20);
     assert.equal(first.path.length, second.path.length);
     for (let i = 0; i < first.path.length; i++) {
-      for (const key of ["x", "y", "vx", "vy", "omega"]) {
+      for (const key of /** @type {const} */ (["x", "y", "vx", "vy", "omega"])) {
         assert.equal(
           first.path[i][key],
           second.path[i][key],
