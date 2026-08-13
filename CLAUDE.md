@@ -137,6 +137,13 @@ before they cost time again, in this stack or the next one that uses Astro:
   browser or screenshot tool at isn't reflecting a source edit, check which
   command actually owns it (`ps aux | grep astro`) before assuming the edit is
   wrong — it's more likely you need an explicit `pnpm build` first.
+  **The port that answers may belong to a different repo entirely.** Asking for
+  `--port 4321` when it's taken makes Astro silently take the next free port and
+  print it; a stale preview of *last week's* prototype was still sitting on 4321
+  and answering 200. Trust the port Astro prints, and confirm the process's own
+  working directory (`ps aux | grep astro` shows the full path) rather than
+  assuming a live server on the expected port is yours. Cheapest possible check
+  before screenshotting anything: `curl -s <url> | grep -o '<title>[^<]*'`.
 - **A `base` without a trailing slash breaks every link built by concatenation,
   and `astro dev`/`astro preview` can't show you this.** `import.meta.env.BASE_URL`
   is exactly the string you set in `astro.config.mjs`'s `base`, with no
@@ -153,6 +160,45 @@ before they cost time again, in this stack or the next one that uses Astro:
   checking them. This didn't surface until the ship-time CI run, because
   neither `pnpm check` nor a local dev server exercises the deployed base path
   or the links check.
+
+## Running the checks
+
+- **Never pipe a check into `tail`, `head`, or `grep` in a command whose exit
+  code you then act on.** A pipeline's status is the *last* command's, so
+  `pnpm check | tail -6 && git commit` commits whatever `tail` felt about
+  life — which is always success. This put a red state into the history once
+  already. Either redirect and inspect (`pnpm check > /tmp/check.log 2>&1; echo
+  $?`) or `set -o pipefail` first.
+- **The shell's working directory persists between tool calls.** A `cd /tmp` to
+  run a screenshot tool leaves the *next* `pnpm build` looking for a
+  `package.json` in `/tmp`. Prefer absolute paths over `cd`.
+
+## Sensors: what the existing ones can't see
+
+The roster in this repo checks a great deal and is silent about the rest.
+Assume a green board means "nothing I have wired is broken", not "the thing is
+right". Two gaps have bitten already:
+
+- **Unit invariants over a single contact say nothing about whether the whole
+  scenario is physical.** Every one of INV-1..INV-5 passed against a serve
+  whose Magnus lift exceeded the ball's own weight — it floated the length of
+  the table without ever bouncing — and against another that reached the
+  receiver 11 cm *below* the playing surface. Each individual bounce and flight
+  obeyed its contract; nothing asserted the composition was a legal serve. When
+  the prototype composes verified pieces into a scenario, write the sensor that
+  checks the scenario, and prove it fails by reverting the bug
+  (`spec/serve.test.ts`, and `notes/evidence.md` for the red run).
+- **Nothing sees inside a `<canvas>`.** `axe-core` audits the DOM, so a canvas
+  is one node with whatever accessible name you gave it. Its `aria-label` has
+  to be written and kept current by hand, and any state the drawing carries
+  needs a text equivalent elsewhere in the DOM.
+
+Accessibility and performance are still unwired as automated checks. `npx
+agent-browser a11y` runs axe-core against the live page and found a real
+contrast failure here that no other check could; it needs a running browser, so
+it's a local step, not part of `pnpm check`. Note the CLI spells viewport
+changes `agent-browser set viewport <w> <h>` — `open --viewport` is silently
+ignored, and screenshots then lie about which breakpoint you're looking at.
 
 ## Your process is part of the mark
 
