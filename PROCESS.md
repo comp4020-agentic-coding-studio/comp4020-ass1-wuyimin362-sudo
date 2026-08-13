@@ -1,83 +1,60 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
-A reading-guide to how the work came together --- a map to your process, not an
-essay about it. Markers read this file and follow its citations; they don't
-trawl the repo for evidence you didn't point at, so if a moment mattered, cite
-it.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and each brief adds its own word count and moment count.
-
 ## What I built
 
-One paragraph: the thing, and the idea behind it.
+*The bat lied to you* — an interactive explainer of one claim: against a
+backspin serve the bat has to be open, against topspin it has to be closed, and
+the two answers barely overlap. Two sliders and a serve toggle drive a
+deterministic simulation of the return in three acts: take the shot, see the
+instant of contact, then see all 1,600 shots at once and watch the answer move
+when the serve changes.
 
 ## The moments that mattered
 
-Three or four for an assignment; fewer is fine for a weekly prototype. Keep the
-list short so each moment has room to do all four jobs:
+**1. Writing the claim as a test that could fail.** The obvious order is to
+build the simulation, then write the copy, then adjust numbers until the
+animation agrees. I wrote the invariants first and left them red
+([`69cd34f`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/69cd34f)),
+including INV-9: the bat-angle centroids of the two feasible regions must differ
+by more than 15°. That is the page's argument in a form that can be false. It
+went green at
+[`f5bcbae`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/f5bcbae)
+at 18.6°, and only because I changed serve parameters — never a threshold. The
+frontier is tight and recorded: above ~150 rad/s of surviving backspin, nothing
+clears INV-8's 5% floor, and the chosen preset sits at 5.27%.
 
-1. **what happened** --- the problem, or the thing the agent got wrong
-2. **what you did instead of the obvious thing** --- the call you made, and why
-   it beat the obvious one
-3. **how you knew it was right** --- the check you ran, the viewport you looked
-   at, what you read before accepting the diff
-4. **the citation** --- a commit or commit range, a `CLAUDE.md` change, a check
-   that went from red to green, a prompt paired with the commit it produced
+**2. Every physics test passed while the physics was wrong.** I had modelled the
+ball as a solid sphere. It is a hollow shell — `I = (2/3)mr²`, not `(2/5)` — and
+INV-1 to INV-5 stayed green throughout, because each checks a single contact.
+The error only shows in how much spin survives a bounce. Re-prompting would have
+fixed the line; instead the correction went into the harness as rule 4 and a
+"what the sensors can't see" section
+([`f630f54`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/f630f54),
+[`07480e1`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/07480e1)).
+Then I deleted the entire first prototype rather than patch around it
+([`2b9484b`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/2b9484b))
+— a `remove:` commit of its own, so the discard is visible rather than buried in
+a feature diff.
 
-Jobs 2 and 3 are the ones the repo can't tell a reader on its own, so they're
-where the marks are. The strongest moments are the ones where a correction
-landed in the **harness** rather than in another prompt --- a rule added to
-`CLAUDE.md`, a check wired up, an attempt thrown away: re-prompting until it
-passes is the routine case, and changing what the agent works against is the
-skilled one.
+**3. The page caught itself lying, twice.** Act 2 printed "leaves as backspin"
+next to "magnus pushes it down", which contradict. The Magnus line is derived
+from the force vector, so the *label* was wrong: I had written
+`omega > 0 ? topspin : backspin`, correct for the incoming ball and backwards
+for the outgoing one. It is now derived from the cross product and pinned
+([`f51864e`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/f51864e)).
+Act 3's closing line then claimed "no bat angle covers both serves" while the
+readout underneath it counted 11 of 180 that do. The plan says the copy gives
+way when the numbers disagree, so the sentence is now generated from the same
+grid the picture is drawn from
+([`78a0172`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/78a0172)).
 
-Cite each moment as a link whose text is the commit hash or range and whose
-target is this repo's commit or compare URL, so a reader clicks straight to the
-evidence:
+**4. Measuring instead of reading.** I assumed the page degraded gracefully. It
+did not: with JavaScript off it rendered 178 characters, and the `<noscript>`
+block was itself empty because a script was filling it. Chrome's Slow 3G showed
+9.1 s to first interaction from a module waterfall. Both fixed and pinned
+([`1b8443b`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/1b8443b)).
 
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
+## Where to look
 
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
-
-> the prompt, verbatim
-
-Screenshots are welcome where one carries the verification better than a
-sentence does. Commit the file to this repo and link it with a **relative**
-path, which is what makes it render on GitHub: `![alt text](docs/before.png)`.
-Images don't count towards the word count and don't replace the citation.
-
-### A worked moment, for shape
-
-Delete this section along with the rest of the boilerplate --- it's here to show
-the four jobs in one paragraph, not to be imitated in content.
-
-> The date formatter kept coming back with `toLocaleDateString()` and no locale
-> argument, so the same build rendered differently on my machine and in CI. I'd
-> already re-prompted it twice, which fixed the line but not the habit, so the
-> third time I put the rule in `CLAUDE.md` instead
-> ([`3f9ac21`](https://github.com/YOUR-ORG/YOUR-REPO/commit/3f9ac21)) and added
-> a spec test that fails on a bare `toLocaleDateString`. That's what told me it
-> had actually taken: the test went red against the old code and green against
-> the new, and the next two features it wrote passed it without prompting
-> ([`3f9ac21...b7e0d14`](https://github.com/YOUR-ORG/YOUR-REPO/compare/3f9ac21...b7e0d14)).
-
-## Before you ship
-
-`pnpm check:evidence` verifies your citations resolve to real commits, that the
-current reflection entry is in `reflections/`, and that your `CLAUDE.md` is
-there --- before a marker ever opens the file. It checks that your map is
-traceable, not that it is good: the marker judges whether your small,
-deliberately chosen set of moments shows real judgement and reflection. A green
-check is not a substitute for that curation.
-
-Images are deliberately not checked, because whether one renders is visible the
-moment you look. Open this file on GitHub and look at it before you ship.
+`notes/evidence.md` carries the raw output behind every number here — the red
+runs, the calibration frontier, the request waterfalls, the axe-core reports.
