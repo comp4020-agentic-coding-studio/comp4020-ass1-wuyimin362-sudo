@@ -38,6 +38,32 @@ export const COPY = Object.freeze({
       "from, not drawn to illustrate it.",
   },
 
+  actThree: {
+    heading: "every shot at once",
+    lede:
+      "every bat angle against every swing direction, played out and coloured by where the " +
+      "ball ended up. the lit region is where it lands. now change the serve and watch the " +
+      "lit region move.",
+    ghostToggle: "show the other serve's answer",
+    /**
+     * Written from the map's own count rather than asserted.
+     *
+     * The first draft of this line read "there is no bat angle that covers
+     * both serves". The map underneath it said 11 of 180 settings do — the
+     * two answers overlap at the edges, they do not miss each other entirely.
+     * Section 2.1 says the copy gives way when the numbers disagree with it,
+     * so the number is now read out of the same grid the picture is drawn
+     * from and the sentence cannot drift again.
+     *
+     * @param {{ shared: number, union: number }} counts
+     */
+    closing: ({ shared, union }) =>
+      `${shared} of the ${union} settings that return either serve return both — ` +
+      `${Math.round((100 * shared) / union)}%. that is why reading the spin is not a ` +
+      `refinement you add once your technique is good. it is the first thing you do, on ` +
+      `every ball, before you have decided anything else.`,
+  },
+
   controls: {
     serve: "the serve coming at you",
     backspin: "backspin",

@@ -7,6 +7,15 @@
 
 import { drawContact, fitDiagram, readContact } from "./contact.js";
 import { COPY } from "./copy.js";
+import {
+  advanceMap,
+  batBand,
+  drawMap,
+  fitMap,
+  mapFor,
+  pointerToControls,
+  sharedGround,
+} from "./map.js";
 import { SPIN, batContact } from "./physics.js";
 import { drawFrame, fitScene } from "./render.js";
 import { cachedServe, simulateReturn } from "./solver.js";
@@ -34,6 +43,12 @@ const state = { spin: SPIN.BACKSPIN, batAngle: 0, swingDirection: 5 };
 let canvas;
 /** @type {HTMLCanvasElement} */
 let contactCanvas;
+/** @type {HTMLCanvasElement} */
+let mapCanvas;
+/** @type {{ left: number, top: number, w: number, h: number } | null} */
+let mapPlot = null;
+let showGhost = true;
+let mapFrame = 0;
 /** @type {ReturnType<typeof simulateReturn> | null} */
 let trace = null;
 let dirty = true;
@@ -120,6 +135,85 @@ function render() {
   if (ghostKey) ghostKey.textContent = COPY.legend.ghost(drawn.strobeMs);
 
   renderContact(serve.contact);
+  renderMap();
+}
+
+/**
+ * Act 3. The map is 1,600 simulations per serve, so it is filled a slice per
+ * animation frame and cached; the sliders stay live while it develops.
+ */
+function renderMap() {
+  const fitted = fitMap(mapCanvas);
+  if (!fitted) return;
+  mapPlot = fitted.plot;
+  drawMap(fitted.ctx, fitted.plot, fitted.width, fitted.height, state.spin, state, showGhost);
+  updateMapReadout();
+}
+
+function updateMapReadout() {
+  const band = batBand(state.spin);
+  const other = state.spin === SPIN.BACKSPIN ? SPIN.TOPSPIN : SPIN.BACKSPIN;
+  const otherBand = batBand(other);
+  const summary = el("map-summary");
+
+  if (!band) {
+    summary.textContent = mapFor(state.spin).done
+      ? "no bat angle in range returns this serve."
+      : "playing out every shot in range…";
+    el("map-readout").replaceChildren();
+    return;
+  }
+
+  summary.textContent =
+    `against ${state.spin}, only bat angles between ${Math.round(band.min)}° and ` +
+    `${Math.round(band.max)}° return the ball at all.`;
+
+  /** @type {[string, string][]} */
+  const rows = [[`${state.spin} works from`, `${Math.round(band.min)}° to ${Math.round(band.max)}°`]];
+  if (otherBand) {
+    rows.push([`${other} works from`, `${Math.round(otherBand.min)}° to ${Math.round(otherBand.max)}°`]);
+  }
+  const overlap = sharedGround();
+  if (overlap) {
+    const union = overlap.backspin + overlap.topspin - overlap.shared;
+    rows.push(["settings that do both", `${overlap.shared} of ${union}`]);
+    el("closing-claim").textContent = COPY.actThree.closing({ shared: overlap.shared, union });
+  }
+
+  el("map-readout").replaceChildren(
+    ...rows.flatMap(([term, value]) => {
+      const dt = document.createElement("dt");
+      dt.textContent = term;
+      const dd = document.createElement("dd");
+      dd.textContent = value;
+      return [dt, dd];
+    }),
+  );
+
+  mapCanvas.setAttribute(
+    "aria-label",
+    `${summary.textContent} bat angle runs left to right, swing direction bottom to top; ` +
+      `the lit region is where the ball lands.`,
+  );
+}
+
+/**
+ * Keep filling both maps in the background. The current serve goes first so
+ * the visitor sees theirs develop; the other is warmed so the flip is instant,
+ * which is the whole point of act 3.
+ */
+function pumpMaps() {
+  const other = state.spin === SPIN.BACKSPIN ? SPIN.TOPSPIN : SPIN.BACKSPIN;
+  const before = mapFor(state.spin).cursor;
+  const otherDone = mapFor(other).done;
+  if (advanceMap(state.spin, 6)) advanceMap(other, 4);
+  const changed = mapFor(state.spin).cursor !== before || mapFor(other).done !== otherDone;
+  if (changed) renderMap();
+  if (!mapFor(state.spin).done || !mapFor(other).done) {
+    mapFrame = requestAnimationFrame(pumpMaps);
+  } else {
+    mapFrame = 0;
+  }
 }
 
 /**
@@ -156,6 +250,7 @@ function boot() {
   fillCopy();
   canvas = /** @type {HTMLCanvasElement} */ (el("table-view"));
   contactCanvas = /** @type {HTMLCanvasElement} */ (el("contact-view"));
+  mapCanvas = /** @type {HTMLCanvasElement} */ (el("solution-map"));
 
   el("bat-angle").addEventListener("input", (event) => {
     state.batAngle = Number(/** @type {HTMLInputElement} */ (event.target).value);
@@ -174,6 +269,39 @@ function boot() {
       state.spin = /** @type {'backspin' | 'topspin'} */ (radio.value);
       syncInputs();
       render();
+      if (!mapFrame) mapFrame = requestAnimationFrame(pumpMaps);
+    });
+  }
+
+  el("show-ghost").addEventListener("change", (event) => {
+    showGhost = /** @type {HTMLInputElement} */ (event.target).checked;
+    renderMap();
+  });
+
+  // Dragging the map is a shortcut, never the only way in: it sets the same
+  // two sliders, and those are keyboard-operable by default.
+  let dragging = false;
+  mapCanvas.addEventListener("pointerdown", (event) => {
+    if (!mapPlot) return;
+    dragging = true;
+    mapCanvas.setPointerCapture(event.pointerId);
+    Object.assign(state, pointerToControls(event, mapCanvas, mapPlot));
+    syncInputs();
+    render();
+    event.preventDefault();
+  });
+  mapCanvas.addEventListener("pointermove", (event) => {
+    if (!dragging || !mapPlot) return;
+    Object.assign(state, pointerToControls(event, mapCanvas, mapPlot));
+    syncInputs();
+    render();
+  });
+  for (const type of /** @type {const} */ (["pointerup", "pointercancel"])) {
+    mapCanvas.addEventListener(type, (event) => {
+      dragging = false;
+      if (mapCanvas.hasPointerCapture(event.pointerId)) {
+        mapCanvas.releasePointerCapture(event.pointerId);
+      }
     });
   }
 
@@ -184,6 +312,7 @@ function boot() {
 
   syncInputs();
   render();
+  mapFrame = requestAnimationFrame(pumpMaps);
 }
 
 boot();

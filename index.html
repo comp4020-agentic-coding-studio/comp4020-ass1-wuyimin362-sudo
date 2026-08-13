@@ -18,6 +18,7 @@
         <a href="./">the bat lied to you</a>
         <a href="#instrument">return the serve</a>
         <a href="#why">why</a>
+        <a href="#map">every shot</a>
       </nav>
     </header>
 
@@ -114,6 +115,35 @@
           </div>
         </div>
         <p class="caption" data-copy="actTwo.caption"></p>
+      </section>
+
+      <section id="map" aria-labelledby="act-three-heading">
+        <h2 id="act-three-heading" data-copy="actThree.heading"></h2>
+        <p class="lede" data-copy="actThree.lede"></p>
+        <div class="map-grid">
+          <div class="stage">
+            <canvas
+              id="solution-map"
+              role="img"
+              aria-label="A map of which settings return the serve."
+            ></canvas>
+            <p class="legend">
+              <span class="key key-in">lands</span>
+              <span class="key key-out">long</span>
+              <span class="key key-net">net</span>
+              <span class="key key-cursor">where you are</span>
+            </p>
+          </div>
+          <div class="map-side">
+            <p id="map-summary" class="contact-sentence"></p>
+            <dl id="map-readout" class="readout"></dl>
+            <label class="ghost-toggle">
+              <input id="show-ghost" type="checkbox" checked />
+              <span data-copy="actThree.ghostToggle"></span>
+            </label>
+          </div>
+        </div>
+        <p id="closing-claim" class="closing"></p>
       </section>
     </main>
 

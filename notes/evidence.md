@@ -677,3 +677,85 @@ stays for graphics only.
 ```
 violations: 0  incomplete: 0  passes: 38
 ```
+
+## Act 3 — the solution space and the flip
+
+Date: 2026-08-13. Screenshots: `notes/shots/act3-1440.png`, `act3-390.png`.
+
+Bat angle horizontal, swing direction vertical, per section 2.3. The lit region
+is where the ball lands; `--rubber` is spent only on the cursor, which is the
+"current operation" section 7 reserves it for.
+
+### Resolution: P0 exceeded without section 9's Web Worker
+
+Measured scan cost:
+
+```
+20x20 =  400 cells:  19 ms
+40x40 = 1600 cells:  43 ms
+60x60 = 3600 cells:  92 ms
+```
+
+Section 9 sets P0 at 20x20 precomputed and P1 at 40x40 in a Web Worker. At
+43 ms the worker's job — keeping the main thread free — is done by filling a
+slice per animation frame, without a second file or a message protocol. Both
+presets are warmed in the background so the flip is instant. INV-11 still pins
+the 3 s ceiling.
+
+### The closing claim was false, and the map said so
+
+The first draft read: *"there is no bat angle that covers both serves."* The
+readout directly beneath it said **11 of 180**. The two answers overlap at the
+edges; they do not miss each other entirely, and the bat-angle bands overlap a
+long way (6–70 against −15–57).
+
+Section 2.1 says the copy gives way when the numbers disagree with it. The
+sentence is now generated from the same grid the picture is drawn from:
+
+```
+11 of the 180 settings that return either serve return both — 6%. that is why
+reading the spin is not a refinement you add once your technique is good. it is
+the first thing you do, on every ball, before you have decided anything else.
+```
+
+### The flip (section 2.3's payoff)
+
+```
+backspin:  only bat angles between   6° and 70° return the ball at all
+topspin:   only bat angles between -15° and 57° return the ball at all
+settings that do both: 11 of 180
+```
+
+Toggling swaps the lit region with the ghost of the other serve's answer, which
+is what the act exists to show. The ghost is a checkbox so the two can also be
+seen at once rather than only by toggling and remembering.
+
+### Section 6.5's 80 KB budget fired, and was fixed without deleting reasoning
+
+```
+built dist/ — 84.3 KB uncompressed (budget 80 KB)
+✗ over the 80 KB budget by 4.3 KB
+```
+
+38% of the source is comments — 26.6 KB — and they are the reasoning, so
+deleting them to save bytes would be deleting the evidence. The build now
+strips comments on the way into `dist/` and leaves the source alone. Still no
+bundler and no transpiler: what ships is the same plain ES modules.
+
+```
+built dist/ — 58.7 KB uncompressed (budget 80 KB), 7 modules checked
+```
+
+That transformation sits between what is tested and what is deployed, so it has
+its own checks: every emitted module is parsed with `node --check` during the
+build, and `test/build.test.js` asserts the stripper never touches code (a `//`
+inside a string, a trailing comment) and that `dist/src/solver.js` returns
+identical results to `src/solver.js` across eight settings. 27 tests to 33.
+
+### Verified in Chrome
+
+```
+axe-core: violations 0, passes 38
+map drag sets both sliders: bat=0 swing=37 from a pointer at 35%/30%
+390 px: no horizontal overflow, map 332x240
+```
