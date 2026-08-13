@@ -21,24 +21,119 @@ export const E_TABLE = 0.8;
 export const MU_TABLE = 0.25;
 export const FIXED_DT = 0.0005;
 
+// Lift per unit spin ratio. The usual sphere formula F = ½ρA·C_L·|v|² with
+// C_L = 2·MAGNUS_COEFFICIENT·(rω/|v|) collapses to
+// F = MAGNUS_COEFFICIENT·ρ·A·r·(ω × v) — linear in both ω and v, with no
+// special case at |v| = 0. At 180 rad/s and 6 m/s that is ~0.6 × the ball's
+// weight, which is the right order for a table tennis ball.
+export const MAGNUS_COEFFICIENT = 0.5;
+
+// A solid sphere has I = ⅖mr², so a tangential impulse J at the contact point
+// moves the ball's surface there by (1 + 5/2)·J/m. Killing a slip of s
+// therefore costs J = -(2/7)·m·s, and spins the ball by -5J/(2mr).
+const ROLLING_IMPULSE_FRACTION = 2 / 7;
+const SPIN_PER_TANGENTIAL_IMPULSE = 5 / (2 * BALL_MASS * BALL_RADIUS);
+
 // Direction must come from cross(omegaVec, v), never a hand-written sign —
 // see spec/physics.test.ts INV-1.
-export function magnusForce(_v: Vec2, _omega: number): Vec2 {
-  throw new Error("magnusForce() is not implemented yet");
+export function magnusForce(v: Vec2, omega: number): Vec2 {
+  // Spin is out of the plane, ω = (0, 0, omega), so
+  // cross(ω, v) = (-omega·v.y, omega·v.x, 0).
+  const k = MAGNUS_COEFFICIENT * AIR_DENSITY * BALL_AREA * BALL_RADIUS;
+  return { x: -k * omega * v.y, y: k * omega * v.x };
 }
 
-export function dragForce(_v: Vec2): Vec2 {
-  throw new Error("dragForce() is not implemented yet");
+export function dragForce(v: Vec2): Vec2 {
+  // Quadratic drag: ½ρA·C_D·|v|² opposing v, written as a coefficient on v so
+  // the direction falls out instead of being re-derived.
+  const k = 0.5 * AIR_DENSITY * BALL_AREA * DRAG_COEFFICIENT * Math.hypot(v.x, v.y);
+  return { x: -k * v.x, y: -k * v.y };
 }
 
-export function step(_state: BallState, _dt: number): BallState {
-  throw new Error("step() is not implemented yet");
+// Semi-implicit (symplectic) Euler: velocity first, then position from the
+// *new* velocity. Under gravity alone that loses exactly ½mg²dt² per step
+// rather than gaining it, which is what keeps INV-4 honest — an explicit Euler
+// here would add energy every step and only pass because drag outruns it.
+export function step(state: BallState, dt: number): BallState {
+  const v = { x: state.vx, y: state.vy };
+  const drag = dragForce(v);
+  const magnus = magnusForce(v, state.omega);
+  const vx = state.vx + ((drag.x + magnus.x) / BALL_MASS) * dt;
+  const vy = state.vy + ((drag.y + magnus.y) / BALL_MASS - GRAVITY) * dt;
+  return {
+    x: state.x + vx * dt,
+    y: state.y + vy * dt,
+    vx,
+    vy,
+    // Aerodynamic spin decay is slow next to a table tennis rally's ~1 s
+    // flights, so spin is carried unchanged through free flight and only
+    // changes where something touches the ball.
+    omega: state.omega,
+  };
 }
 
-export function simulateFlight(_initial: BallState, _steps: number): BallState[] {
-  throw new Error("simulateFlight() is not implemented yet");
+export function simulateFlight(initial: BallState, steps: number): BallState[] {
+  const trajectory: BallState[] = [initial];
+  let current = initial;
+  for (let i = 0; i < steps; i++) {
+    current = step(current, FIXED_DT);
+    trajectory.push(current);
+  }
+  return trajectory;
 }
 
-export function tableBounce(_state: BallState): BallState {
-  throw new Error("tableBounce() is not implemented yet");
+export interface Surface {
+  /** Unit vector pointing out of the surface, towards the ball. */
+  normal: Vec2;
+  /** Velocity of the surface at the contact point. */
+  velocity: Vec2;
+  restitution: number;
+  friction: number;
+}
+
+// One impulse routine for every contact in the rally: the table is a still
+// surface with a soft normal and a slippery face, the bat is a moving surface
+// with a grippy one. Writing the bat as a second Surface rather than a second
+// function is what stops the two from drifting apart — and it is why the spin
+// the bat imparts is a consequence of the same Coulomb cone INV-5 pins on the
+// table, not a separate rule invented for the bat.
+export function collide(state: BallState, surface: Surface): BallState {
+  const { normal: n, velocity: sv, restitution, friction } = surface;
+  // Tangent is the normal rotated a quarter turn, so (n, t) is right-handed.
+  const t: Vec2 = { x: -n.y, y: n.x };
+
+  const ux = state.vx - sv.x;
+  const uy = state.vy - sv.y;
+  const approach = ux * n.x + uy * n.y;
+  // Already separating: no contact, so no impulse to apply.
+  if (approach >= 0) return state;
+
+  const normalImpulse = -(1 + restitution) * BALL_MASS * approach;
+
+  // Slip of the ball's surface against the other surface. The contact point
+  // sits at -r·n from the centre, and cross(ω, -r·n) · t is exactly -r·ω for
+  // any unit n, so the spin term needs no per-surface algebra.
+  const slip = ux * t.x + uy * t.y - BALL_RADIUS * state.omega;
+  const impulseToRoll = -ROLLING_IMPULSE_FRACTION * BALL_MASS * slip;
+  // Coulomb cone: friction can at most stop the slip, and never exceeds
+  // μ times the normal impulse (INV-5).
+  const tangentImpulse =
+    Math.sign(impulseToRoll) * Math.min(Math.abs(impulseToRoll), friction * normalImpulse);
+
+  return {
+    x: state.x,
+    y: state.y,
+    vx: state.vx + (normalImpulse * n.x + tangentImpulse * t.x) / BALL_MASS,
+    vy: state.vy + (normalImpulse * n.y + tangentImpulse * t.y) / BALL_MASS,
+    omega: state.omega - tangentImpulse * SPIN_PER_TANGENTIAL_IMPULSE,
+  };
+}
+
+export function tableBounce(state: BallState): BallState {
+  return collide(state, {
+    normal: { x: 0, y: 1 },
+    velocity: { x: 0, y: 0 },
+    restitution: E_TABLE,
+    friction: MU_TABLE,
+  });
 }
