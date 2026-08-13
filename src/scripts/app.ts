@@ -63,7 +63,7 @@ const INK = {
   handle: "#a1a1aa",
   swing: "#c4b5fd",
   guide: "rgba(232, 234, 240, 0.28)",
-  label: "rgba(232, 234, 240, 0.66)",
+  label: "rgb(232 234 240 / 78%)",
 } as const;
 
 const state = {
@@ -308,8 +308,12 @@ function markEnding(ctx: CanvasRenderingContext2D, view: View, result: ReturnTra
     return;
   }
 
-  const cx = view.x(end.x);
-  const cy = view.y(end.y);
+  // A very open bat with a flat swing pops the ball almost straight up, and it
+  // leaves the top of the frame long before it lands. Clamp the marker to the
+  // edge so the shot still has a visible ending rather than just vanishing.
+  const clamp = (v: number, lo: number, hi: number): number => Math.min(Math.max(v, lo), hi);
+  const cx = view.x(clamp(end.x, SCENE.xMin + 0.04, SCENE.xMax - 0.04));
+  const cy = view.y(clamp(end.y, SCENE.yMin + 0.02, SCENE.yMax - 0.02));
   const r = 6;
   ctx.beginPath();
   ctx.moveTo(cx - r, cy - r);
@@ -531,17 +535,19 @@ let lastAnnounce = 0;
 let reducedMotion = false;
 
 function describe(outcome: ReturnOutcome): string {
+  // Phrased as "with the bat …" rather than "a … bat", so the sentence does
+  // not have to pick between "a" and "an" for open / closed / vertical.
   const bat =
     state.batAngle > 0
       ? `open ${state.batAngle}°`
       : state.batAngle < 0
         ? `closed ${Math.abs(state.batAngle)}°`
         : "vertical";
-  const swing = `swung at ${state.swingDirection}°`;
+  const setting = `with the bat ${bat} and the swing at ${state.swingDirection}°`;
   if (outcome.outcome === "IN") {
-    return `Against the ${state.preset} serve, a ${bat} bat ${swing} returns the ball, landing ${outcome.landingX.toFixed(2)} m from the far end line.`;
+    return `Against the ${state.preset} serve, ${setting}, the return lands ${outcome.landingX.toFixed(2)} m from the far end line.`;
   }
-  return `Against the ${state.preset} serve, a ${bat} bat ${swing} sends the ball ${OUTCOMES[outcome.outcome].verdict}.`;
+  return `Against the ${state.preset} serve, ${setting}, the return goes ${OUTCOMES[outcome.outcome].verdict}.`;
 }
 
 function updateReadouts(outcome: ReturnOutcome): void {

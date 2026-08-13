@@ -1,7 +1,12 @@
 :root {
   --ink: #e8eaf0;
   --ink-dim: #9aa3b2;
-  --ink-faint: #6b7383;
+
+  /* #6b7383 reads as the right weight for secondary labels but lands at
+     4.08:1 on the page background — under WCAG AA, and axe-core caught it on
+     eight nodes. This is the nearest tone in the same family that clears 4.5
+     on both the page (5.19) and the panels (4.87). */
+  --ink-faint: #7c8497;
   --bg: #0b0d12;
   --panel: #12151d;
   --panel-2: #171b25;
