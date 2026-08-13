@@ -419,13 +419,19 @@ not exist yet.
 ### `node --test test/`
 
 ```
-Error: Cannot find module '/Users/yiminwu/comp4020/comp4020-ass1-wuyimin362-sudo/src/physics.js'
+Error: Cannot find module '/Users/yiminwu/comp4020/comp4020-ass1-wuyimin362-sudo/test'
   code: 'MODULE_NOT_FOUND'
 
 ℹ tests 1
 ℹ pass 0
 ℹ fail 1
 ```
+
+(That message is the runner, not the contract: `node --test test/` resolves the
+positional argument as a module rather than a directory on Node 24. The working
+invocation is `node --test "test/*.test.js"`, which is what `pnpm test:unit`
+runs. Recorded because the first reading of this output was wrong — it looked
+like the missing `src/physics.js` and was actually the path.)
 
 Not yet wired into `pnpm check`: the course harness forbids committing a red
 board, and the plan wants the red state visible in history. Committing the
@@ -447,3 +453,97 @@ lands with the implementation.
 
 INV-8 also fails under the first build's numbers: the backspin feasible region
 was 134/3621 = 3.70%, against a required > 5%.
+
+## Phase 2 — INV-1..INV-13 green against the section 4 contract
+
+Date: 2026-08-13
+
+```
+$ pnpm test:unit          # node --test "test/*.test.js"
+ℹ tests 24
+ℹ pass 24
+ℹ fail 0
+
+$ pnpm check
+check exit=0
+ Test Files  5 passed (5)      # vitest, spec/ only
+      Tests  36 passed (36)
+```
+
+### Three things the contract did not survive contact with
+
+**1. The return's first table touch was being bounced, not classified.**
+`advance()` applies the table bounce, which the serve trace needs. Reusing it
+for the return left every landing ball with `vy > 0`, so the landing test never
+fired and every shot that should have been IN sailed on to become OUT. The
+feasible area was *exactly* 0% for all 108 candidate serves — the giveaway was
+that it was zero rather than merely small.
+
+**2. Section 4.8's serve presets are not legal serves under section 4's
+physics.** `v = (-6.5, 1.2)` from `y = 0.30` never bounces at all: it crosses
+the receiver's end line still 0.27 m in the air. Rejection census over a
+2,160-launch sweep (`notes/diagnose.js`):
+
+```
+=== backspin: 53 legal ===
+    135  no contact point (0 bounce(s) at [])
+     35  clipped the net (0.078)
+     27  first bounce off server half (-0.15)
+```
+
+**3. INV-4's literal wording is not a valid bound.** "kinetic energy after <=
+before + the bat's kinetic energy" fails against correct physics at
+`theta=-30, phi=-60`: the ball leaves with 0.175 J against a literal ceiling of
+0.089 J, because a ball rebounding off an approaching surface can leave at up
+to `2*v_bat + e*v_ball`. Replaced with the rigorous form of the same intent —
+total energy in the bat's rest frame, rotation included, cannot rise — which is
+strictly stronger and holds across 150 (theta, phi, omega) combinations.
+
+### Calibration frontier
+
+Serve presets were searched against the invariants themselves
+(`notes/calibrate.js`), not against how a trajectory looks. The binding
+constraint is INV-8's 5% feasible-area floor against how much spin still has to
+be on the ball for section 2.1's argument to be about spin at all:
+
+```
+contact-spin floor   best backspin feasible area   pairs passing INV-7/8/9/10
+        0 rad/s               7.1%                        1011
+      100 rad/s               6.4%                         451
+      150 rad/s               4.6%                           0
+      300 rad/s               4.6%                           0
+```
+
+Above roughly 150 rad/s of surviving backspin, nothing clears 5%. An early
+candidate reached a 36.2 deg gap but arrived at `omega = -43` — the bounces
+having scrubbed the spin off — so the gap was being produced by the two serves'
+arrival *speeds*, not by spin. That satisfies INV-9 while making the page's
+argument false, so contact spin became a search constraint.
+
+A second candidate cleared the net by 0.5 mm (`netCrossY = 0.1530` against a
+0.1525 m net). Requiring 1 cm of clearance costs nothing measurable.
+
+### Chosen presets
+
+Both serves are struck with the *same* launch velocity; only the height and the
+spin differ.
+
+```
+backspin  launch { x: 1.5, y: 0.28, vx: -6.4, vy: -1.6 }  spin 240 rad/s
+          bounces 0.61, -1.30   net crossing y=0.167
+          contact x=-1.77 y=0.105 vx=-2.95 omega=-104  (17 rev/s)
+
+topspin   launch { x: 1.5, y: 0.36, vx: -6.4, vy: -1.6 }  spin 160 rad/s
+          bounces 0.63, -1.20   net crossing y=0.241
+          contact x=-1.84 y=0.153 vx=-3.83 omega=+204  (32 rev/s)
+
+INV-7   default (backspin, 0, +5) -> NET
+INV-8   backspin area 5.27%   topspin area 6.66%      (floor 5%)
+INV-9   centroid 30.8 vs 12.1 deg, gap 18.6 deg       (floor 15)
+INV-10  IoU 0.051                                     (ceiling 0.25)
+        backspin theta band 4..70, topspin -14..58
+```
+
+INV-8 has 0.27 percentage points of headroom, and 5.3% is the most the 2 deg
+grid yields anywhere in the searched space. Any change to a coefficient has to
+re-check it — this is the invariant that will go red first.

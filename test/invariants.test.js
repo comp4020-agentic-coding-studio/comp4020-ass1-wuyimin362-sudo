@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 
 import {
+  BALL_INERTIA,
   BALL_MASS,
   E_BAT,
   E_TABLE,
@@ -12,6 +13,7 @@ import {
   SWING_SPEED,
   TABLE_HALF,
   batImpulse,
+  batSurface,
   magnusForce,
   omegaSignFor,
   simulateFlight,
@@ -128,18 +130,33 @@ describe("INV-4 energy bookkeeping", () => {
     assert.ok(kinetic(tableBounce(before)) <= kinetic(before) + EPS);
   });
 
-  it("a bat impulse adds no more than the bat carries", () => {
-    // The bat does work, so the ball may leave faster than it arrived — but
-    // not by more than the swing itself could supply.
-    const ceiling = 0.5 * BALL_MASS * SWING_SPEED ** 2;
-    for (const theta of [-30, 0, 25, 70]) {
-      for (const phi of [-60, 0, 40, 80]) {
-        const before = { x: -1.6, y: 0.25, vx: -4, vy: -1, omega: -300 };
-        const after = batImpulse(before, theta, phi);
-        assert.ok(
-          kinetic(after) <= kinetic(before) + ceiling + EPS,
-          `theta=${theta} phi=${phi} produced energy from nowhere`,
-        );
+  it("a bat impulse creates no energy in the bat's own frame", () => {
+    // Section 5 phrases this as "kinetic energy after <= kinetic energy before
+    // + the bat's kinetic energy". Taken literally that is not a valid bound
+    // and this assertion failed against correct physics: a ball rebounding
+    // from an approaching surface can leave at up to 2*v_bat + e*v_ball, so
+    // 0.5*m*v_bat^2 does not cover it. At theta=-30, phi=-60 the ball leaves
+    // with 0.175 J against a literal ceiling of 0.089 J.
+    //
+    // The rigorous form of the same intent — no energy from nowhere — is that
+    // in the bat's rest frame, where the impulses do no net work on the bat,
+    // the ball's total energy cannot rise. Rotational energy is included
+    // because friction trades spin against translation in both directions.
+    const energyInBatFrame = (s, bat) =>
+      0.5 * BALL_MASS * ((s.vx - bat.x) ** 2 + (s.vy - bat.y) ** 2) +
+      0.5 * BALL_INERTIA * s.omega ** 2;
+
+    for (const theta of [-30, -10, 0, 25, 45, 70]) {
+      for (const phi of [-60, -20, 0, 40, 80]) {
+        for (const omega of [-500, -200, 0, 200, 500]) {
+          const before = { x: -1.6, y: 0.25, vx: -4, vy: -1, omega };
+          const after = batImpulse(before, theta, phi);
+          const bat = batSurface(theta, phi).surfaceVelocity;
+          assert.ok(
+            energyInBatFrame(after, bat) <= energyInBatFrame(before, bat) + EPS,
+            `theta=${theta} phi=${phi} omega=${omega}: ${energyInBatFrame(after, bat)} > ${energyInBatFrame(before, bat)}`,
+          );
+        }
       }
     }
   });
