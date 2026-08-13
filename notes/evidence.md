@@ -404,3 +404,46 @@ $ curl -s localhost:4321/comp4020-ass1-wuyimin362-sudo/ | grep -o '<title>[^<]*'
 $ curl -s localhost:4324/comp4020-ass1-wuyimin362-sudo/ | grep -o '<title>[^<]*'
 <title>Spin tells your bat where to point
 ```
+
+## Phase 1/2 restart against the execution plan — baseline red
+
+Date: 2026-08-13
+The execution plan (`COMP4020-A1-execution-plan.md`) surfaced after the first
+build. Its sections 2, 4, 5 and 6 are non-negotiable and the first build
+violated several. Restarting the simulation layer against the contract.
+
+`test/invariants.test.js` (INV-1..INV-11, INV-13) and `test/purity.test.js`
+(INV-12) written first, against a `src/physics.js` and `src/solver.js` that do
+not exist yet.
+
+### `node --test test/`
+
+```
+Error: Cannot find module '/Users/yiminwu/comp4020/comp4020-ass1-wuyimin362-sudo/src/physics.js'
+  code: 'MODULE_NOT_FOUND'
+
+ℹ tests 1
+ℹ pass 0
+ℹ fail 1
+```
+
+Not yet wired into `pnpm check`: the course harness forbids committing a red
+board, and the plan wants the red state visible in history. Committing the
+tests red but unwired satisfies both; `pnpm check` stays green and the wiring
+lands with the implementation.
+
+### What the first build got wrong, measured against section 4
+
+| plan | first build | consequence |
+| --- | --- | --- |
+| `I = (2/3)mr²` hollow shell | `(2/5)mr²` solid | too little spin survives a bounce |
+| rolling impulse `2m\|u\|/5` | `2m\|u\|/7` | same |
+| `C_L = min(0.33, 1.5·S)` | `0.24·S`, uncapped | lift exceeded the ball's weight at serve spins |
+| `e_bat = 0.55` | `0.85` | returns far too fast |
+| `mu_bat = 0.90` | `1.00` | over-grippy |
+| swing `7.0 m/s` | `4.5 m/s` | changed to widen the answer band |
+| net at `x = 0`, table `[-1.37, 1.37]` | net at `x = 1.37`, table `[0, 2.74]` | — |
+| contact at the bounce apex | fixed plane `x = 3.0` | — |
+
+INV-8 also fails under the first build's numbers: the backspin feasible region
+was 134/3621 = 3.70%, against a required > 5%.
