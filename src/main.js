@@ -31,9 +31,6 @@ function fillCopy() {
     const value = copyAt(node.getAttribute("data-copy") ?? "");
     if (typeof value === "string") node.textContent = value;
   }
-  for (const node of document.querySelectorAll("[data-static-noscript]")) {
-    node.textContent = COPY.noscript;
-  }
 }
 
 /** @type {{ spin: 'backspin' | 'topspin', batAngle: number, swingDirection: number }} */
@@ -198,11 +195,31 @@ function updateMapReadout() {
 }
 
 /**
+ * Section 6.6. The trajectory is never animated — it is always drawn complete,
+ * which is what the reduced-motion path asks for, so that is simply how the
+ * page behaves for everyone.
+ *
+ * The one thing left that moves is the solution map filling in. That is
+ * progress feedback rather than decoration, but it is still motion nobody
+ * asked for, so under reduced motion both maps are computed in one pass
+ * instead. The whole scan is 43 ms per serve; nobody waits for it either way.
+ */
+const prefersReducedMotion = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/**
  * Keep filling both maps in the background. The current serve goes first so
  * the visitor sees theirs develop; the other is warmed so the flip is instant,
  * which is the whole point of act 3.
  */
 function pumpMaps() {
+  if (prefersReducedMotion()) {
+    advanceMap(state.spin, Number.POSITIVE_INFINITY);
+    advanceMap(state.spin === SPIN.BACKSPIN ? SPIN.TOPSPIN : SPIN.BACKSPIN, Number.POSITIVE_INFINITY);
+    renderMap();
+    mapFrame = 0;
+    return;
+  }
   const other = state.spin === SPIN.BACKSPIN ? SPIN.TOPSPIN : SPIN.BACKSPIN;
   const before = mapFor(state.spin).cursor;
   const otherDone = mapFor(other).done;

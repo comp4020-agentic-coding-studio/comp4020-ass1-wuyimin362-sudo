@@ -759,3 +759,130 @@ axe-core: violations 0, passes 38
 map drag sets both sliders: bat=0 swing=37 from a pointer at 35%/30%
 390 px: no horizontal overflow, map 332x240
 ```
+
+## Phase 5 — hardening against section 6
+
+Date: 2026-08-13. All measurements against `dist/`, which is what deploys.
+
+### The page was blank without JavaScript
+
+Section 3 keeps every string in `src/copy.js` and `main.js` writes them into the
+markup. Measured, that left a no-JS visitor **178 characters** — no headline, no
+explanation — and the `<noscript>` block was itself empty, because it was being
+filled by the script it exists to substitute for.
+
+The build now writes the copy into the emitted HTML, keeping one source of
+truth. Same page, JavaScript disabled: **1836 characters**, plus a real
+fallback with an inline SVG showing the two bat angles. Pinned by three
+assertions in `test/build.test.js`, including one that fails if the emitted HTML
+ever references an external URL.
+
+### Keyboard (section 6.1)
+
+```
+skip link → nav ×4 → serve radio → #bat-angle → #swing-direction
+→ #show-ghost → (wraps)
+
+focus rings:  #bat-angle        outline 2px solid rgb(237,241,238)
+              #swing-direction  outline 2px solid rgb(237,241,238)
+              #show-ghost       outline 2px solid rgb(237,241,238)
+```
+
+Tab order matches visual order and reaches every control. Nothing on the page
+is pointer-only: dragging the solution map sets the same two sliders.
+
+### Resize mid-interaction (section 6.2)
+
+Bat 34°, swing −18°, topspin serve, outcome "out" — held across every width:
+
+```
+1440:  table 998x186  contact 569x240  map 544x380  overflow=false
+ 320:  table 262x110  contact 262x240  map 262x240  overflow=false
+ 390:  table 332x110  contact 332x240  map 332x240  overflow=false
+1920:  table 998x186  contact 569x240  map 544x380  overflow=false
+back:  table 998x186  contact 569x240  map 544x380  overflow=false
+```
+
+### Announcements (section 6.3)
+
+A 12-step slider drag produced **no** writes to the live region; one landed
+after it settled. The 150 ms debounce is doing its job rather than reading out
+every pixel.
+
+### Touch (section 6.4)
+
+```
+bat-angle:        touch-action none, height 44px
+swing-direction:  touch-action none, height 44px
+serve radios:     min-height 44px
+```
+
+`touch-action: none` is on the sliders only, so dragging one does not scroll
+the page and the rest of the page still scrolls normally.
+
+### Reduced motion (section 6.6)
+
+Nothing in `styles.css` transitions or animates, and the trajectory is always
+drawn complete — the reduced-motion behaviour is simply how the page works, as
+section 6.6 intends. The one remaining motion was the solution map filling in a
+slice per frame; under `prefers-reduced-motion: reduce` both maps are now
+computed in a single pass instead. Verified with the media feature emulated:
+map summary and closing claim both render, no errors.
+
+### Slow 3G (section 6.5) — and where the 3 s target stands
+
+Chrome's own Slow 3G preset driven over CDP (2000 ms latency, 51,200 B/s):
+
+```
+before: first text 2163 ms, interactive 9144 ms
+```
+
+The cause was a module waterfall — plain ES modules are discovered by parsing,
+so the browser fetched `main.js`, read its imports, fetched those, read theirs.
+Request-level proof, before the fix:
+
+```
+sent   recv   resource
+   0   2024   /
+2053   4072   styles.css
+2054   4599   src/main.js      ← imports discovered only after this arrived
+```
+
+`index.html` now declares all seven modules with `modulepreload`, and a test
+fails if a module is added to `src/` without being listed. After:
+
+```
+sent   recv   resource
+   0   2024   /
+2053   4072   styles.css
+2054   4485   src/contact.js
+2054   4599   src/main.js
+2054   6562   src/copy.js
+2054   6797   src/map.js
+2054   6829   src/physics.js
+2054   8730   src/render.js
+2054   8906   src/solver.js
+```
+
+**Every subresource is now requested at 2054 ms.** The waterfall is gone at the
+request level, which was the fixable part. The staggered *arrivals* are the
+local dev server: HTTP/1.1 with roughly three usable connections, each request
+paying the emulated 2000 ms. GitHub Pages serves HTTP/2, where all eight
+multiplex on one connection and pay the round trip once — so this local figure
+overstates the deployed one and the real number has to be measured against the
+live URL.
+
+Section 12 asks for interactive within 3 s on Slow 3G. With a 2000 ms round
+trip that needs the whole page in **one** request: the document alone costs
+2.0 s, and 62.7 KB at 51,200 B/s is another 1.2 s, so even a fully inlined page
+lands near 3.2 s. Two round trips — document, then subresources — is 4 s before
+any bytes move. Flagged rather than quietly missed.
+
+### Section 12 mechanical checks
+
+```
+external resources in built HTML: 0
+dist size:                        62.7 KB  (budget 80 KB)
+shipped modules:                  7, all parsed with node --check at build
+pnpm check:                       exit 0, 37 tests
+```

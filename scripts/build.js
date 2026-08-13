@@ -21,6 +21,8 @@ import { execFileSync } from "node:child_process";
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 
+import { COPY } from "../src/copy.js";
+
 const OUT = "dist";
 const ENTRIES = ["index.html", "styles.css", "src"];
 const BUDGET_BYTES = 80 * 1024;
@@ -56,6 +58,46 @@ export function stripComments(source) {
   return `${out.join("\n").replace(/\n{3,}/g, "\n\n").trim()}\n`;
 }
 
+/**
+ * Write the static copy into the emitted HTML.
+ *
+ * Section 3 keeps every string in src/copy.js so the wording can be reviewed
+ * in one place, and main.js fills the page from it at runtime. With
+ * JavaScript disabled that left a visitor 178 characters — no headline, no
+ * explanation, and a <noscript> block that was itself empty because it was
+ * being filled by the script it exists to substitute for.
+ *
+ * Filling the markup at build time keeps the single source of truth and fixes
+ * both: the deployed HTML carries its own text, so it reads without
+ * JavaScript and paints before the modules arrive on a slow connection
+ * (section 6.5, 6.7). fillCopy() still runs and writes the same strings.
+ *
+ * @param {string} html
+ * @returns {string}
+ */
+function inlineCopy(html) {
+  return html.replace(
+    /(<(\w+)([^>]*\sdata-copy="([\w.]+)"[^>]*)>)<\/\2>/g,
+    (whole, open, _tag, _attrs, path) => {
+      const value = path
+        .split(".")
+        .reduce(
+          (/** @type {any} */ node, /** @type {string} */ key) =>
+            node == null ? undefined : node[key],
+          /** @type {any} */ (COPY),
+        );
+      // Entries that are functions are generated from live data at runtime and
+      // have nothing meaningful to write here.
+      if (typeof value !== "string") return whole;
+      const escaped = value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      return `${open}${escaped}</${_tag}>`;
+    },
+  );
+}
+
 /** @param {string} dir @returns {Promise<number>} */
 async function totalBytes(dir) {
   let total = 0;
@@ -84,6 +126,9 @@ if (process.argv[1]?.endsWith("build.js")) {
   for (const entry of ENTRIES) {
     await cp(entry, join(OUT, entry), { recursive: true });
   }
+
+  const indexPath = join(OUT, "index.html");
+  await writeFile(indexPath, inlineCopy(await readFile(indexPath, "utf8")));
 
   const emitted = await jsFiles(join(OUT, "src"));
   for (const file of emitted) {

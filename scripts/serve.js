@@ -23,8 +23,13 @@ createServer(async (req, res) => {
   try {
     const info = await stat(file);
     if (!info.isFile()) throw new Error("not a file");
+    // Content-Length matters more than it looks: without it the response is
+    // close-delimited, Chrome cannot reuse the connection, and every
+    // subresource pays a fresh handshake. Measuring a throttled load against a
+    // server that does this measures the server, not the page.
     res.writeHead(200, {
       "content-type": TYPES[extname(file)] ?? "application/octet-stream",
+      "content-length": info.size,
       "cache-control": "no-store",
     });
     createReadStream(file).pipe(res);

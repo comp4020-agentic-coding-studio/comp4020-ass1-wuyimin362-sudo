@@ -175,6 +175,15 @@ h2 {
   background: var(--table);
 }
 
+.noscript p {
+  margin: 0 0 1rem;
+}
+
+.noscript svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* ------------------------------------------------------------- the stage */
 
 .stage {
