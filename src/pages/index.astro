@@ -1,5 +1,7 @@
 ---
 import "../styles/global.css";
+
+const base = import.meta.env.BASE_URL;
 ---
 
 <!doctype html>
@@ -7,20 +9,208 @@ import "../styles/global.css";
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>COMP4020 prototype</title>
+    <meta
+      name="description"
+      content="Two table tennis serves arrive at your bat at the same height and speed, spinning opposite ways. The bat angle that returns them differs by more than twenty degrees. A simulation you can drive."
+    />
+    <title>Spin tells your bat where to point</title>
   </head>
   <body>
-    <header>
+    <a class="skip" href="#instrument">Skip to the simulation</a>
+
+    <header class="masthead">
       <nav aria-label="Primary">
-        <a href={import.meta.env.BASE_URL}>Home</a>
+        <a href={base}>Bat angle</a>
+        <a href="#instrument">The shot</a>
+        <a href="#map">Every shot</a>
+        <a href="#why">Why</a>
       </nav>
     </header>
+
     <main>
-      <h1>COMP4020 prototype</h1>
-      <p data-testid="intro">
-        Replace this with your prototype. This week's brief is on the course website;
-        <code>spec/README.md</code> explains how the checks in this repo relate to it.
-      </p>
+      <section class="hero">
+        <p class="eyebrow">Table tennis, from the receiving end</p>
+        <h1>Spin tells your bat where to point</h1>
+        <p class="standfirst">
+          Two serves reach your bat at the same height, within half a metre per second of the
+          same speed. One is spinning backwards at about 112 turns a second; the other forwards
+          at about 104. Everything a beginner is taught to watch — the speed, the height, the
+          bounce — is the same. The bat angle that returns them is more than twenty degrees
+          apart, and using the wrong one doesn't make the shot slightly worse. It puts the ball
+          in the net.
+        </p>
+      </section>
+
+      <section id="instrument" class="instrument" aria-labelledby="instrument-heading">
+        <h2 id="instrument-heading">Take the shot</h2>
+        <p class="lede">
+          The serve has already bounced on your half and is coming up to your bat. You choose two
+          things: how far the face is tilted back, and which way you swing. Everything else — how
+          hard, where you stand — is fixed.
+        </p>
+
+        <div class="stage">
+          <canvas
+            id="table-view"
+            role="img"
+            aria-label="Side view of a table tennis table. Set the controls below to see the return."
+          ></canvas>
+          <p class="legend">
+            <span class="key key-serve">the serve</span>
+            <span class="key key-return">your return</span>
+            <span class="key key-swing">swing direction</span>
+          </p>
+        </div>
+
+        <div class="controls">
+          <fieldset class="serve-picker">
+            <legend>The serve coming at you</legend>
+            <div class="radios">
+              <label>
+                <input type="radio" name="serve" value="backspin" checked />
+                <span>Backspin</span>
+              </label>
+              <label>
+                <input type="radio" name="serve" value="topspin" />
+                <span>Topspin</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="slider">
+            <label for="bat-angle">
+              Bat angle
+              <output id="bat-angle-value" for="bat-angle">0°</output>
+              <span id="bat-angle-hint" class="hint">vertical</span>
+            </label>
+            <input id="bat-angle" type="range" min="-30" max="70" step="1" value="0" />
+            <p class="scale"><span>closed, over the ball</span><span>open, face back</span></p>
+          </div>
+
+          <div class="slider">
+            <label for="swing-direction">
+              Swing direction
+              <output id="swing-direction-value" for="swing-direction">5°</output>
+              <span id="swing-direction-hint" class="hint">brushing up</span>
+            </label>
+            <input id="swing-direction" type="range" min="-60" max="80" step="1" value="5" />
+            <p class="scale"><span>down, chopping</span><span>up, brushing</span></p>
+          </div>
+
+          <div class="verdict">
+            <p id="outcome-label" class="outcome">NET</p>
+            <p id="outcome-detail" class="outcome-detail">It never gets over.</p>
+            <button id="find-shot" type="button">Move me to a shot that lands</button>
+          </div>
+        </div>
+
+        <p id="outcome-live" class="visually-hidden" role="status" aria-live="polite"></p>
+      </section>
+
+      <section id="map" class="map" aria-labelledby="map-heading">
+        <h2 id="map-heading">Every shot at once</h2>
+        <p class="lede">
+          Every bat angle against every swing direction, played out and coloured by where the ball
+          ended up. Green lands. Now change the serve and watch the green move.
+        </p>
+        <div class="map-grid">
+          <div>
+            <canvas
+              id="solution-map"
+              role="img"
+              aria-label="A map of which bat angles and swing directions return the serve."
+            ></canvas>
+            <p class="axis-label">Bat angle runs bottom to top; swing direction left to right.</p>
+          </div>
+          <div class="map-side">
+            <p class="legend">
+              <span class="key key-in">lands</span>
+              <span class="key key-net">net</span>
+              <span class="key key-out">long</span>
+              <span class="key key-ghost">the other serve's answer</span>
+            </p>
+            <p id="map-summary" class="summary">Working out every shot in range…</p>
+            <p id="map-overlap" class="overlap"></p>
+            <p class="aside">
+              That is the whole point. There is very nearly no setting that covers both serves, so
+              reading the spin isn't a refinement you add once your technique is good. It's the
+              first thing you have to do, every single ball.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="why" class="why" aria-labelledby="why-heading">
+        <h2 id="why-heading">Why the angle has to move</h2>
+        <div class="prose">
+          <p>
+            Look at where the ball actually touches your bat: the front of it, the point facing
+            you. A ball carrying backspin is turning such that the front of it is sweeping
+            <em>upwards</em> at the moment of contact. The rubber grips that surface, and friction
+            pushes back the other way — down. The ball leaves your bat heading for the floor,
+            which is why a vertical bat against a backspin serve is a ball in the net rather than
+            a ball that's merely a bit low.
+          </p>
+          <p>
+            A topspin ball does the opposite. Its front face is sweeping downwards, so friction
+            throws the ball up, and the same vertical bat sends it over the far end line.
+          </p>
+          <p>
+            Opening the face tilts the bounce upwards by enough to cancel the downward drag.
+            Closing it tilts the bounce down by enough to cancel the upward kick. The angle you
+            need is whatever undoes the spin the other player put on the ball — which is why it
+            moves when they change their serve, and why it can't be a habit.
+          </p>
+          <p class="callout">
+            The friction that does all of this is the same friction that decides how a car tyre
+            grips. It can only ever push sideways up to a limit set by how hard the two surfaces
+            are pressed together — so against a really heavy serve, past a point, no bat angle
+            saves you. That's the black region at the edges of the map.
+          </p>
+        </div>
+      </section>
+
+      <section class="model" aria-labelledby="model-heading">
+        <h2 id="model-heading">What's actually being simulated</h2>
+        <div class="prose">
+          <p>
+            A 2.7 gram, 40 millimetre ball on a regulation 2.74 metre table, stepped through the
+            air half a millisecond at a time under gravity, quadratic drag, and Magnus lift taken
+            from the cross product of spin and velocity. Contact with the table and contact with
+            the bat run through one impulse routine, with the friction impulse capped by the
+            Coulomb limit, so the spin the bat imparts obeys the same rule as the spin the table
+            scrubs off.
+          </p>
+          <p>
+            The numbers are anchored on measurable things rather than fitted until the picture
+            looked right. The Magnus coefficient comes from the observation that a full topspin
+            loop — about a hundred revolutions a second at twenty metres a second — pulls down at
+            roughly one and three quarter times the ball's own weight.
+          </p>
+          <p>
+            It is deliberately a side view. There is no sidespin, no placement across the width of
+            the table, no opponent moving, and the swing speed is fixed so that the two controls
+            on this page are the only things that vary. Those are real parts of the game and they
+            are all left out, because the claim here is narrow enough to check: at a fixed
+            contact point, spin sets the bat angle.
+          </p>
+        </div>
+      </section>
     </main>
+
+    <footer>
+      <p class="footer-note">
+        Built for COMP4020 at the ANU. The physics, the serve presets, and the tests that pin
+        them are in
+        <a href="https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo"
+          >the source repository</a
+        >.
+      </p>
+    </footer>
+
+    <script>
+      import { boot } from "../scripts/app";
+      boot();
+    </script>
   </body>
 </html>

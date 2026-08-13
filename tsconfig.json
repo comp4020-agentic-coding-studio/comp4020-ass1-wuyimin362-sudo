@@ -1,3 +1,10 @@
 {
-  "extends": "astro/tsconfigs/strict"
+  "extends": "astro/tsconfigs/strict",
+  "comment": [
+    "notes/ holds throwaway scratch scripts kept as process evidence, not build",
+    "inputs. They are run directly with `node --experimental-strip-types`, which",
+    "needs explicit .ts import extensions that this tsconfig rightly rejects, so",
+    "they sit outside the typecheck rather than having the project relax for them."
+  ],
+  "exclude": ["dist", "node_modules", "notes"]
 }
