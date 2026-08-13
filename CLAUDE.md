@@ -15,6 +15,66 @@ course API, carries your harness forward from last week, and helps you turn the
 spec's checkable lines into tests of your own. Read the spec before you build,
 and see `spec/README.md` for how the checks in this repo relate to it.
 
+## What this is
+
+An interactive explainer: two sliders (bat angle, swing direction) determine a
+single deterministic table-tennis return trajectory. One mechanic, three acts.
+The claim the page makes: the correct bat angle for backspin is the opposite of
+what intuition says, and it flips again for topspin.
+
+`COMP4020-A1-execution-plan.md` is the contract for this build. Sections 2, 4, 5
+and 6 of it are **not negotiable**. Where the implementation and the plan
+disagree, the implementation changes. If a section of the plan looks wrong,
+**stop and ask** — do not quietly edit the spec to match what was built.
+
+## Non-negotiable rules
+
+1. `src/physics.js` and `src/solver.js` are pure. No `document`, `window`,
+   `canvas`, `localStorage`, `requestAnimationFrame`, `Math.random`,
+   `Date.now`. They must run under bare `node`. Enforced by
+   `test/purity.test.js` (INV-12).
+2. Physics uses a fixed timestep of 0.0005 s. Never drive physics from a
+   rendering callback's delta time.
+3. `omega` is a scalar, counter-clockwise positive. Never hand-write the sign of
+   the Magnus force — always derive it from the cross product. The mapping from
+   omega's sign to topspin/backspin lives in exactly one place: `SPIN` in
+   `physics.js`.
+4. The ball is a **hollow shell**: `I = (2/3)·m·r²`, so an impulse at the
+   contact point costs `2·m·|u|/5` to kill the slip — not the `2/7` a solid
+   sphere would give. Getting this wrong is silent: every direction test still
+   passes.
+5. Coefficients `C_D`, `C_L`, `e_table`, `e_bat`, `mu_table`, `mu_bat` and the
+   serve presets are calibrated. Changing any of them requires INV-2, INV-3,
+   INV-7, INV-9 and INV-10 to pass, plus a line in the changelog below saying
+   which invariant was red and why this was the fix.
+6. Zero runtime dependencies. Zero network requests. No CDN, no web fonts, no
+   image files. The `test/` suite uses `node:test` only.
+7. Every slider must be a native `<input type="range">`. Never replace it with a
+   custom drag handle. Never remove `outline` on focus. Never add a third
+   slider.
+8. Before claiming a fix works, run `node --test test/` and paste the output.
+   "It looks right now" is not evidence.
+9. Do not write `PROCESS.md` or `reflections/assignment-1.md`. The agent's job
+   at the end of each phase is to put evidence into `notes/evidence.md` — commit
+   SHAs, failing test output, discarded branch and file names. The narrative is
+   written by hand.
+
+### Definition of done for any change
+
+- `node --test test/` fully green
+- `pnpm check` green (the starter's own invariants run against `dist/`)
+- works with keyboard alone at 1920×1080 and at 390×844
+- diff small enough to describe in one sentence
+
+### Changelog of rule changes
+
+<!-- append: date, rule added/changed, the failure that caused it -->
+
+- 2026-08-13 — rules 1–9 adopted from the execution plan's §8. Rule 4 (hollow
+  shell) is stated separately from rule 5 because the first build used a solid
+  sphere's `2/5·m·r²` and `2/7` rolling impulse and every physics test stayed
+  green; the error only shows up in how much spin survives a bounce.
+
 ## How to work in here
 
 - Keep the dev server running (`pnpm dev`) so you see changes as you make them.
