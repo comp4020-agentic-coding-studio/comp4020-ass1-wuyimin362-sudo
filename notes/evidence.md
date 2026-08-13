@@ -597,3 +597,83 @@ section 7's "失败态不是红色，是褪色".
 The default shot buries into the receiver's own half about 30 cm from the bat,
 so a fade alone was indistinguishable from nothing happening. A faded tick
 marks where it died.
+
+## Act 2 — the contact, drawn from the numbers the simulation used
+
+Date: 2026-08-13. Screenshots: `notes/shots/act2-1440.png`, `act2-390.png`.
+
+`applyImpulse()` is now a one-line wrapper over `contactDetail()`, which
+returns the normal, the tangent, the slip, both impulses and whether friction
+was sliding or gripping. Act 2 reads that object. The direction of the
+dependency is the point: a diagram that re-derives its own vectors is an
+illustration, not an explanation, and can drift.
+
+### The diagram caught a bug in its own labelling
+
+The first render printed, for the default shot:
+
+```
+leaves as      backspin 10 rev/s at 12.4 m/s
+in flight      magnus pushes it down
+```
+
+Those contradict — backspin lifts. The Magnus line is derived from the actual
+force vector, so it was right and the spin *name* was wrong. The label was
+written `omega > 0 ? "topspin" : "backspin"`, which is correct for the incoming
+ball and backwards for the outgoing one: the serve travels -x and the return
+travels +x, so the same sign of omega means opposite spins. Exactly the
+hand-written sign rule 3 exists to forbid.
+
+Fixed with `spinNameFor(omega, vx)`, which asks the cross product which way the
+Magnus force points and names the spin from that. Pinned by three new
+assertions in `test/invariants.test.js` — 24 tests to 27.
+
+### The vectors track both sliders and the serve toggle (section 2.3)
+
+```
+backspin, vertical bat (the default):
+  surface sweeping upwards at 1.5 m/s, so friction throws it downwards
+  comes in backspin 17 rev/s | slip 1.5 up | gripping 1.6 mN·s
+  leaves as topspin 10 rev/s at 12.4 m/s | magnus pushes it down
+
+backspin, open bat + brush up (lands):
+  slip drops to 0.4 m/s | gripping 0.5 mN·s
+  leaves as topspin 14 rev/s at 12.0 m/s | magnus pushes it down
+
+backspin, closed bat + chop:
+  slip 3.8 m/s upwards | gripping 4.1 mN·s
+  leaves as backspin 2 rev/s at 11.6 m/s | magnus lifts it
+
+topspin serve, vertical bat:
+  surface sweeping downwards at 4.7 m/s, so friction throws it upwards
+  comes in topspin 32 rev/s | slip 4.7 down | gripping 5.1 mN·s
+  leaves as backspin 10 rev/s at 13.1 m/s | magnus lifts it
+```
+
+The last case is the mirror of the first, which is section 2.1's argument
+stated in the mechanism rather than in prose.
+
+### Numbers moved out of the canvas
+
+First pass drew the readings as floating canvas labels next to each arrow.
+They collided with the ball and with each other at most slider positions. They
+are now a `<dl>` beside the diagram: no collisions, and a screen reader gets
+them for free.
+
+### axe-core, after the act 2 markup landed
+
+```
+violations: 1  [serious] color-contrast, 7 nodes
+  .eyebrow, #bat-angle-hint, #swing-direction-hint,
+  the four .scale span labels
+```
+
+Cause: nested opacity multiplies. A `.hint` at 0.75 inside a label at 0.6 lands
+at 0.45, which measures 4.00:1 on `--table-lo` — under AA. `--rubber` as text
+is 2.85:1. Replaced opacity-based text tones with measured colour tokens
+(`--text-dim` 6.47:1, `--text-faint` 5.54:1, `--rubber-text` 5.01:1); `--rubber`
+stays for graphics only.
+
+```
+violations: 0  incomplete: 0  passes: 38
+```

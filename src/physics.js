@@ -85,6 +85,26 @@ export function omegaSignFor(spin, vx) {
 }
 
 /**
+ * Name the spin a ball is carrying, given which way it is travelling.
+ *
+ * The inverse of omegaSignFor, and it exists because the naming is *not* a
+ * property of omega's sign alone. A ball flying -x carries backspin at
+ * omega < 0; the same omega on a ball flying +x is topspin. The return leaves
+ * the bat travelling the opposite way to the serve, so any label written as
+ * `omega > 0 ? "topspin" : "backspin"` is right for one of them and wrong for
+ * the other — which is exactly what act 2 printed until the Magnus readout,
+ * which is derived, contradicted it.
+ *
+ * @param {number} omega
+ * @param {number} vx
+ * @returns {'backspin' | 'topspin' | 'none'}
+ */
+export function spinNameFor(omega, vx) {
+  if (omega === 0) return "none";
+  return Math.sign(omega) === omegaSignFor(SPIN.BACKSPIN, vx) ? SPIN.BACKSPIN : SPIN.TOPSPIN;
+}
+
+/**
  * Lift coefficient, section 4.3: C_L = min(0.33, 1.5·S) with S = r|omega|/|v|.
  *
  * The cap is load bearing. Without it the linear term keeps growing with spin
@@ -191,13 +211,57 @@ export function simulateFlight(initial, steps) {
  * @returns {BallState}
  */
 export function applyImpulse(state, surface) {
+  return contactDetail(state, surface).after;
+}
+
+/**
+ * @typedef {{ normal: Vec2, tangent: Vec2, relative: Vec2, approach: number,
+ *             normalImpulse: number, slip: number, tangentImpulse: number,
+ *             sliding: boolean, touched: boolean,
+ *             before: BallState, after: BallState }} ContactDetail
+ */
+
+/**
+ * The same impulse, with its working shown.
+ *
+ * applyImpulse() is a thin wrapper over this rather than the other way round,
+ * and that direction matters: act 2 draws the slip, the friction impulse and
+ * the spin change straight out of this object, so the diagram cannot drift
+ * away from the numbers the simulation actually used. A diagram that
+ * re-derives its own vectors is an illustration, not an explanation.
+ *
+ * @param {BallState} state
+ * @param {{ normal: Vec2, surfaceVelocity: Vec2, restitution: number, friction: number }} surface
+ * @returns {ContactDetail}
+ */
+export function contactDetail(state, surface) {
   const { normal: n, surfaceVelocity: sv, restitution, friction } = surface;
   const t = { x: -n.y, y: n.x };
 
   const relX = state.vx - sv.x;
   const relY = state.vy - sv.y;
+  const relative = { x: relX, y: relY };
   const approach = relX * n.x + relY * n.y;
-  if (approach >= 0) return state;
+
+  const base = {
+    normal: n,
+    tangent: t,
+    relative,
+    approach,
+    before: state,
+  };
+
+  if (approach >= 0) {
+    return {
+      ...base,
+      normalImpulse: 0,
+      slip: 0,
+      tangentImpulse: 0,
+      sliding: false,
+      touched: false,
+      after: state,
+    };
+  }
 
   const normalImpulse = -(1 + restitution) * BALL_MASS * approach;
 
@@ -205,15 +269,35 @@ export function applyImpulse(state, surface) {
   // Killing the slip entirely costs 2m|u|/5 for a hollow shell; Coulomb caps
   // what friction can actually deliver.
   const impulseToRoll = (2 * BALL_MASS * Math.abs(slip)) / 5;
-  const tangentImpulse = -Math.sign(slip) * Math.min(impulseToRoll, friction * normalImpulse);
+  const coulombCap = friction * normalImpulse;
+  const sliding = impulseToRoll > coulombCap;
+  const tangentImpulse = -Math.sign(slip) * Math.min(impulseToRoll, coulombCap);
 
   return {
-    x: state.x,
-    y: state.y,
-    vx: state.vx + (normalImpulse * n.x + tangentImpulse * t.x) / BALL_MASS,
-    vy: state.vy + (normalImpulse * n.y + tangentImpulse * t.y) / BALL_MASS,
-    omega: state.omega - (BALL_RADIUS * tangentImpulse) / BALL_INERTIA,
+    ...base,
+    normalImpulse,
+    slip,
+    tangentImpulse,
+    sliding,
+    touched: true,
+    after: {
+      x: state.x,
+      y: state.y,
+      vx: state.vx + (normalImpulse * n.x + tangentImpulse * t.x) / BALL_MASS,
+      vy: state.vy + (normalImpulse * n.y + tangentImpulse * t.y) / BALL_MASS,
+      omega: state.omega - (BALL_RADIUS * tangentImpulse) / BALL_INERTIA,
+    },
   };
+}
+
+/**
+ * @param {BallState} state
+ * @param {number} batAngleDeg
+ * @param {number} swingDirectionDeg
+ * @returns {ContactDetail}
+ */
+export function batContact(state, batAngleDeg, swingDirectionDeg) {
+  return contactDetail(state, batSurface(batAngleDeg, swingDirectionDeg));
 }
 
 /**

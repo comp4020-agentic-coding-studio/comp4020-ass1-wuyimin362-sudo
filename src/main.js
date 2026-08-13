@@ -5,8 +5,9 @@
  * the solution map come in phase 4.
  */
 
+import { drawContact, fitDiagram, readContact } from "./contact.js";
 import { COPY } from "./copy.js";
-import { SPIN } from "./physics.js";
+import { SPIN, batContact } from "./physics.js";
 import { drawFrame, fitScene } from "./render.js";
 import { cachedServe, simulateReturn } from "./solver.js";
 
@@ -31,6 +32,8 @@ const state = { spin: SPIN.BACKSPIN, batAngle: 0, swingDirection: 5 };
 
 /** @type {HTMLCanvasElement} */
 let canvas;
+/** @type {HTMLCanvasElement} */
+let contactCanvas;
 /** @type {ReturnType<typeof simulateReturn> | null} */
 let trace = null;
 let dirty = true;
@@ -115,11 +118,44 @@ function render() {
   // so the legend states what was drawn rather than a constant.
   const ghostKey = document.querySelector(".key-ghost");
   if (ghostKey) ghostKey.textContent = COPY.legend.ghost(drawn.strobeMs);
+
+  renderContact(serve.contact);
+}
+
+/**
+ * Act 2. Driven by the same two sliders, from the same contact object the
+ * trajectory came out of.
+ *
+ * @param {import('./physics.js').BallState} contact
+ */
+function renderContact(contact) {
+  const fitted = fitDiagram(contactCanvas);
+  if (!fitted) return;
+  const detail = batContact(contact, state.batAngle, state.swingDirection);
+  drawContact(fitted.ctx, fitted.width, fitted.height, detail);
+
+  // The numbers live in the DOM rather than as floating canvas labels: they
+  // collided with the ball and with each other at every second slider
+  // position, and in the DOM a screen reader gets them for free.
+  const reading = readContact(detail);
+  el("contact-sentence").textContent = reading.sentence;
+  const list = el("contact-readout");
+  list.replaceChildren(
+    ...reading.rows.flatMap(([term, value]) => {
+      const dt = document.createElement("dt");
+      dt.textContent = term;
+      const dd = document.createElement("dd");
+      dd.textContent = value;
+      return [dt, dd];
+    }),
+  );
+  contactCanvas.setAttribute("aria-label", reading.sentence);
 }
 
 function boot() {
   fillCopy();
   canvas = /** @type {HTMLCanvasElement} */ (el("table-view"));
+  contactCanvas = /** @type {HTMLCanvasElement} */ (el("contact-view"));
 
   el("bat-angle").addEventListener("input", (event) => {
     state.batAngle = Number(/** @type {HTMLInputElement} */ (event.target).value);

@@ -27,6 +27,17 @@ export const COPY = Object.freeze({
       "swing is fixed.",
   },
 
+  actTwo: {
+    heading: "why the angle has to move",
+    lede:
+      "the same two sliders, at the moment of contact. the ball's surface is already " +
+      "moving before it touches the rubber, because it is spinning — and the rubber grips " +
+      "that surface and pushes back the other way.",
+    caption:
+      "every arrow here is read out of the same impulse the trajectory above was built " +
+      "from, not drawn to illustrate it.",
+  },
+
   controls: {
     serve: "the serve coming at you",
     backspin: "backspin",

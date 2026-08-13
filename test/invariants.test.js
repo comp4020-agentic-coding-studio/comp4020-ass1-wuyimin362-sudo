@@ -17,6 +17,7 @@ import {
   magnusForce,
   omegaSignFor,
   simulateFlight,
+  spinNameFor,
   tableBounce,
 } from "../src/physics.js";
 
@@ -324,5 +325,34 @@ describe("the contract's constants are the ones in section 4", () => {
     assert.equal(MU_BAT, 0.9);
     assert.equal(SWING_SPEED, 7.0);
     assert.equal(TABLE_HALF, 1.37);
+  });
+});
+
+// A spin name is not a property of omega's sign alone: it depends on which way
+// the ball is going. The serve travels -x and the return travels +x, so a
+// label written as `omega > 0 ? topspin : backspin` is right for one and wrong
+// for the other. Act 2 printed exactly that, and only the derived Magnus
+// readout — "pushes it down" under a ball labelled backspin — gave it away.
+describe("spin names are derived, not assumed", () => {
+  it("agrees with which way the Magnus force actually points", () => {
+    for (const vx of [6, -6]) {
+      for (const omega of [-400, -120, 120, 400]) {
+        const name = spinNameFor(omega, vx);
+        const lift = magnusForce({ x: vx, y: 0 }, omega).y;
+        assert.equal(
+          name,
+          lift > 0 ? "backspin" : "topspin",
+          `omega=${omega} on a ball travelling ${vx > 0 ? "+x" : "-x"} was called ${name} but its Magnus force ${lift > 0 ? "lifts" : "dips"}`,
+        );
+      }
+    }
+  });
+
+  it("flips when the ball reverses direction", () => {
+    assert.notEqual(spinNameFor(200, 6), spinNameFor(200, -6));
+  });
+
+  it("has no name for a ball that is not spinning", () => {
+    assert.equal(spinNameFor(0, 6), "none");
   });
 });
