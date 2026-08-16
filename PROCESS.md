@@ -23,18 +23,20 @@ at 18.6°, and only because I changed serve parameters — never a threshold. Th
 frontier is tight and recorded: above ~150 rad/s of surviving backspin, nothing
 clears INV-8's 5% floor, and the chosen preset sits at 5.27%.
 
-**2. Every physics test passed while the physics was wrong.** I had modelled the
-ball as a solid sphere. It is a hollow shell — `I = (2/3)mr²`, not `(2/5)` — and
-INV-1 to INV-5 stayed green throughout, because each checks a single contact.
-The error only shows in how much spin survives a bounce. Re-prompting would have
-fixed the line; instead the correction went into the harness as rule 4 and a
-"what the sensors can't see" section
-([`f630f54`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/f630f54),
-[`07480e1`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/07480e1)).
-Then I deleted the entire first prototype rather than patch around it
-([`2b9484b`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/2b9484b))
-— a `remove:` commit of its own, so the discard is visible rather than buried in
-a feature diff.
+**2. Every physics test passed while the physics was wrong — twice.** First, a
+serve generated more Magnus lift than the ball weighed and floated the length of
+the table without ever bouncing, while INV-1 to INV-5 stayed green: each checks
+one contact, and none asks whether the whole scenario is physical. That became a
+`CLAUDE.md` section on what the sensors structurally cannot see
+([`07480e1`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/07480e1)).
+Second, I had the ball as a solid sphere when it is a hollow shell —
+`I = (2/3)mr²` — which shows up only in how much spin survives a bounce; that
+became rule 4 ([`f630f54`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/f630f54)).
+Re-prompting would have fixed either line. Then I deleted the whole first
+prototype rather than patch around it
+([`2b9484b`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/2b9484b)) —
+a `remove:` commit of its own, so the discard is visible rather than buried in a
+feature diff.
 
 **3. The page caught itself lying, twice.** Act 2 printed "leaves as backspin"
 next to "magnus pushes it down", which contradict. The Magnus line is derived
