@@ -20,13 +20,12 @@ it said 11 of 180 do.
 
 ## What it changed
 
-I had treated a green suite as evidence that things were fine. It is only
-evidence about what I thought to measure. Every physics invariant passed while I
-modelled a table tennis ball as a solid sphere, because each checked a single
-contact and none asked whether the whole scenario was physical.
+Almost none of this was typed by me, which made it very clear where my actual
+work was. Re-prompting fixed lines; it never fixed the same mistake twice. The
+corrections that held were the ones that changed what the work had to satisfy —
+the hollow-shell rule in `CLAUDE.md`, the invariant that made my argument
+falsifiable, the sensor for whether the serve was even legal.
 
-So the habit I want is narrower than "write tests": when I make a claim, write
-the thing that would catch me if it were false, and prefer the version that
-reads its number off the same computation the claim came from. My strongest
-fixes here were not code — a rule in `CLAUDE.md`, and a section on what the
-sensors structurally cannot see. I want to spend corrections there.
+So the skill I want is not writing more code faster. It is being able to see,
+when something breaks, whether the fix belongs in the output or in the standard
+the output is judged against.
