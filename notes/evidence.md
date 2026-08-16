@@ -886,3 +886,83 @@ dist size:                        62.7 KB  (budget 80 KB)
 shipped modules:                  7, all parsed with node --check at build
 pnpm check:                       exit 0, 37 tests
 ```
+
+## Phase 6 — shipped
+
+Date: 2026-08-16. Live URL:
+<https://comp4020-agentic-coding-studio.github.io/comp4020-ass1-wuyimin362-sudo/>
+
+### The ship sequence
+
+```
+repo        comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo
+cutoff      2026-08-17T12:00 Australia/Canberra
+preflight   FAIL: 19 commits ahead of origin/main  -> pushed bc19855..76cd8c0
+secret scan clean (remote refs+tags, publishable worktree, all reachable history)
+flip        PUBLIC
+pages       build_type=workflow
+run         31949552428 — check ✓ and deploy ✓, including "Verify the deployed
+            site is online"
+```
+
+CI's `check` job passed every step that cannot run locally: the internal links
+check (with the base-path rewrite), the process evidence, and both TruffleHog
+secret scans.
+
+### The deployed site verified
+
+```
+curl -4, 8 consecutive requests:  8/8 HTTP 200, HTTP/2, ~40 ms
+every asset (css + 7 modules):    200
+Chrome, 6 consecutive cold loads: 6/6 fully functional
+live interaction at 8° / 25°:     "in — on the table. 0.80 m past the net."
+```
+
+### An IPv6 defect on this network, not in the site
+
+Roughly four in five requests from this machine failed instantly at connect.
+Verbose curl shows why: it resolves to GitHub Pages' IPv6 range and the TLS
+handshake is reset by peer.
+
+```
+*   Trying [2606:50c0:8001::153]:443...
+* TLS handshake, Client hello (1)
+* Recv failure: Connection reset by peer
+curl: (35)
+
+forced -4:  8/8  200
+forced -6:  0/3  reset
+IPv6 to api.github.com and google.com: 200 — so v6 works here generally
+```
+
+So it is this network's path to `2606:50c0::/40` specifically. Independent
+evidence the site is fine: CI's own online check passed from a GitHub runner,
+and every asset returns 200 over IPv4.
+
+### Slow 3G on the live site — why no number is quoted
+
+The measurement cannot be trusted from this machine, for two reasons, so it is
+reported as unmeasured rather than as a figure.
+
+Chrome's `Network.emulateNetworkConditions` adds its latency **per request**,
+not per connection, so it cannot reward HTTP/2 multiplexing — exactly the thing
+the deployed site gains over the local HTTP/1.1 dev server. And the IPv6 resets
+above add retries on top.
+
+What the live waterfall does show, and what is trustworthy, is that the
+modulepreload fix holds in production:
+
+```
+sent   recv   resource
+   0   2020   /
+2052   4070   styles.css
+2053   4246   src/main.js
+2053   4221   src/contact.js
+2053   6414   src/physics.js
+2053   6389   src/render.js
+2053   6445   src/solver.js
+```
+
+Every subresource is requested at 2053 ms rather than discovered in layers.
+Section 12's 3 s target remains flagged rather than claimed: with a 2000 ms
+round trip, two round trips is 4 s before any bytes move.
