@@ -30,8 +30,11 @@ one contact, and none asks whether the whole scenario is physical. That became a
 `CLAUDE.md` section on what the sensors structurally cannot see
 ([`07480e1`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/07480e1)).
 Second, I had the ball as a solid sphere when it is a hollow shell —
-`I = (2/3)mr²` — which shows up only in how much spin survives a bounce; that
-became rule 4 ([`f630f54`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/f630f54)).
+`I = (2/3)mr²` — which shows up only in how much spin survives a bounce. I did
+not catch that one: my own plan's §4.1 stated the correct inertia, and I only
+learned my model was wrong by checking the implementation against the contract
+rather than against the tests, which were all still green. That became rule 4
+([`f630f54`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/f630f54)).
 Re-prompting would have fixed either line. Then I deleted the whole first
 prototype rather than patch around it
 ([`2b9484b`](https://github.com/comp4020-agentic-coding-studio/comp4020-ass1-wuyimin362-sudo/commit/2b9484b)) —
